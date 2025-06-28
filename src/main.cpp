@@ -18,6 +18,7 @@ const int NUM_PHONES = 8;
 
 // Menu System State
 bool inMenu = false;
+bool inAdjustmentMode = false;  // Track if we're adjusting a setting
 int currentMenuItem = 0;
 int maxConcurrentSetting = MAX_CONCURRENT_ACTIVE_PHONES;  // Local copy for menu editing
 
@@ -121,7 +122,7 @@ void setup() {
     Serial.println(F("- Status LED on pin 13 (onboard)"));
     Serial.println(F("- 20x4 LCD on I2C (A4/A5)"));
     Serial.print(F("- Concurrent phone limit: "));
-    Serial.print(MAX_CONCURRENT_ACTIVE_PHONES);
+    Serial.print(maxConcurrentSetting);
     Serial.println(F(" phones maximum"));
     Serial.println(F("Press pause button (pin A0) to stop/start all activity"));
     Serial.println(F("Status LED: ON=phones ringing, Fast Blink=paused, OFF=idle"));
@@ -165,8 +166,10 @@ void loop() {
     ringerManager.step(currentTime);
   }
   
-  // Update display
-  displayManager.update(currentTime, systemPaused, &ringerManager, MAX_CONCURRENT_ACTIVE_PHONES);
+  // Update display (only when not in menu mode)
+  if (!inMenu) {
+    displayManager.update(currentTime, systemPaused, &ringerManager, maxConcurrentSetting);
+  }
   
   // Update status LED
   updateStatusLED();
@@ -272,14 +275,14 @@ bool canStartNewCall() {
   }
   
   int currentActivePhones = globalRingerManager->getActiveCallCount();
-  bool canStart = currentActivePhones < MAX_CONCURRENT_ACTIVE_PHONES;
+  bool canStart = currentActivePhones < maxConcurrentSetting;
   
   // Optional debug output (can be commented out for production)
   if (!canStart && !DEBUG_ENCODER_MODE) {
     Serial.print(F("Concurrent limit reached: "));
     Serial.print(currentActivePhones);
     Serial.print(F("/"));
-    Serial.print(MAX_CONCURRENT_ACTIVE_PHONES);
+    Serial.print(maxConcurrentSetting);
     Serial.println(F(" phones already active"));
   }
   
@@ -294,34 +297,123 @@ void handleEncoderEvents() {
     Serial.print(F("Encoder Event: "));
     Serial.println(encoderManager.getEventString(event));
     
-    // Handle button press for menu toggle
+    // Handle button press for menu toggle/selection
     if (event == EncoderManager::BUTTON_PRESS) {
       if (!inMenu) {
         inMenu = true;
+        inAdjustmentMode = false;
+        currentMenuItem = 0;  // Start at first menu item
         Serial.println(F("*** ENTERING MENU MODE ***"));
+        Serial.print(F("Menu Item: "));
+        Serial.println(menuItemNames[currentMenuItem]);
+        displayManager.showMessage("MENU MODE", menuItemNames[currentMenuItem], 
+                                   "Turn: Navigate", "Press: Select/Exit");
       } else {
-        inMenu = false;
-        Serial.println(F("*** EXITING MENU MODE ***"));
+        // In menu - handle selection
+        if (inAdjustmentMode) {
+          // We're adjusting a setting - save and return to menu navigation
+          Serial.println(F("*** SAVING SETTING & RETURNING TO MENU ***"));
+          Serial.print(F("Concurrent limit saved as: "));
+          Serial.println(maxConcurrentSetting);
+          inAdjustmentMode = false;  // Exit adjustment mode but stay in menu
+          // Show the current menu item again
+          displayManager.showMessage("MENU MODE", menuItemNames[currentMenuItem], 
+                                     "Turn: Navigate", "Press: Select/Exit");
+        } else {
+          // Not in adjustment mode - handle menu selection
+          switch (currentMenuItem) {
+            case MENU_CONCURRENT_LIMIT:
+              Serial.println(F("*** SELECTED: Concurrent Limit ***"));
+              Serial.print(F("Current value: "));
+              Serial.println(maxConcurrentSetting);
+              inAdjustmentMode = true;  // Enter adjustment mode
+              displayManager.showMessage("Concurrent Limit", 
+                                         String("Setting: ") + String(maxConcurrentSetting),
+                                         "Turn: Adjust (1-8)", "Press: Save & Back");
+              break;
+              
+            case MENU_EXIT:
+              inMenu = false;
+              inAdjustmentMode = false;
+              Serial.println(F("*** EXITING MENU MODE ***"));
+              displayManager.showStatus(&ringerManager, systemPaused, maxConcurrentSetting);
+              break;
+          }
+        }
       }
       return;
     }
     
-    // Log other events with menu context
-    switch (event) {
-      case EncoderManager::CLOCKWISE:
-        Serial.println(inMenu ? F("MENU: Would increment") : F("NORMAL: Would increment setting"));
-        break;
-        
-      case EncoderManager::COUNTER_CLOCKWISE:
-        Serial.println(inMenu ? F("MENU: Would decrement") : F("NORMAL: Would decrement setting"));
-        break;
-        
-      case EncoderManager::BUTTON_LONG_PRESS:
-        Serial.println(F("Long press: Would reset to defaults"));
-        break;
-        
-      default:
-        break;
+    // Handle rotation events
+    if (inMenu) {
+      switch (event) {
+        case EncoderManager::CLOCKWISE:
+          if (inAdjustmentMode && currentMenuItem == MENU_CONCURRENT_LIMIT && maxConcurrentSetting < 8) {
+            // If we're adjusting concurrent limit, increment the value
+            maxConcurrentSetting++;
+            Serial.print(F("MENU: Concurrent limit increased to "));
+            Serial.println(maxConcurrentSetting);
+            displayManager.showMessage("Concurrent Limit", 
+                                       String("Setting: ") + String(maxConcurrentSetting),
+                                       "Turn: Adjust (1-8)", "Press: Save & Back");
+          } else if (!inAdjustmentMode) {
+            // Navigate to next menu item
+            currentMenuItem = (currentMenuItem + 1) % MENU_ITEM_COUNT;
+            Serial.print(F("MENU: Navigate to "));
+            Serial.println(menuItemNames[currentMenuItem]);
+            displayManager.showMessage("MENU MODE", menuItemNames[currentMenuItem], 
+                                       "Turn: Navigate", "Press: Select/Exit");
+          }
+          break;
+          
+        case EncoderManager::COUNTER_CLOCKWISE:
+          if (inAdjustmentMode && currentMenuItem == MENU_CONCURRENT_LIMIT && maxConcurrentSetting > 1) {
+            // If we're adjusting concurrent limit, decrement the value
+            maxConcurrentSetting--;
+            Serial.print(F("MENU: Concurrent limit decreased to "));
+            Serial.println(maxConcurrentSetting);
+            displayManager.showMessage("Concurrent Limit", 
+                                       String("Setting: ") + String(maxConcurrentSetting),
+                                       "Turn: Adjust (1-8)", "Press: Save & Back");
+          } else if (!inAdjustmentMode) {
+            // Navigate to previous menu item
+            currentMenuItem = (currentMenuItem - 1 + MENU_ITEM_COUNT) % MENU_ITEM_COUNT;
+            Serial.print(F("MENU: Navigate to "));
+            Serial.println(menuItemNames[currentMenuItem]);
+            displayManager.showMessage("MENU MODE", menuItemNames[currentMenuItem], 
+                                       "Turn: Navigate", "Press: Select/Exit");
+          }
+          break;
+          
+        case EncoderManager::BUTTON_LONG_PRESS:
+          Serial.println(F("Long press: Reset concurrent limit to default"));
+          maxConcurrentSetting = MAX_CONCURRENT_ACTIVE_PHONES;
+          displayManager.showMessage("Concurrent Limit", 
+                                     String("Reset to: ") + String(maxConcurrentSetting),
+                                     "Turn: Adjust (1-8)", "Press: Save & Back");
+          break;
+          
+        default:
+          break;
+      }
+    } else {
+      // Not in menu - normal operation
+      switch (event) {
+        case EncoderManager::CLOCKWISE:
+          Serial.println(F("NORMAL: Would increment setting"));
+          break;
+          
+        case EncoderManager::COUNTER_CLOCKWISE:
+          Serial.println(F("NORMAL: Would decrement setting"));
+          break;
+          
+        case EncoderManager::BUTTON_LONG_PRESS:
+          Serial.println(F("Long press: Would reset to defaults"));
+          break;
+          
+        default:
+          break;
+      }
     }
   }
 }
