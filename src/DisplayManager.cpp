@@ -124,28 +124,29 @@ void DisplayManager::showMessage(const String& line1, const String& line2,
 void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused) {
     if (!lcdAvailable) return; // Skip if LCD not available
     
-    // Line 1: Title and system time
+    // Line 1: Title and system time (20 chars max: "CallCenter  00:00")
     lcd.setCursor(0, 0);
-    lcd.print("Call Center Sim " + formatTime(millis()));
+    String titleLine = "CallCenter  " + formatTime(millis());
+    lcd.print(padString(titleLine, 20));
     
-    // Line 2: Active calls and ringing phones
+    // Line 2: Active calls and ringing phones (20 chars max: "A:0 R:0 Tot:8      ")
     lcd.setCursor(0, 1);
-    String statusLine = "Active:" + String(ringerManager->getActiveCallCount()) + 
-                       " Ring:" + String(ringerManager->getRingingPhoneCount()) +
+    String statusLine = "A:" + String(ringerManager->getActiveCallCount()) + 
+                       " R:" + String(ringerManager->getRingingPhoneCount()) +
                        " Tot:" + String(ringerManager->getActivePhoneCount());
     lcd.print(padString(statusLine, 20));
     
-    // Line 3: Visual phone status (8 phones, 2 chars each + spaces = 20 chars max)
+    // Line 3: Visual phone status (20 chars max for 8 phones)
     lcd.setCursor(0, 2);
     String phoneStatus = formatPhoneStatus(ringerManager);
     lcd.print(padString(phoneStatus, 20));
     
-    // Line 4: Status message
+    // Line 4: Status message (20 chars max)
     lcd.setCursor(0, 3);
     if (paused) {
         centerText("** PAUSED **", 3);
     } else {
-        String runningMsg = "Running - Pin13=Pause";
+        String runningMsg = "Run - A0=Pause";  // Shortened to fit
         lcd.print(padString(runningMsg, 20));
     }
 }
@@ -161,7 +162,7 @@ void DisplayManager::showPauseMessage() {
     showMessage("Call Center Sim",
                 "** SYSTEM PAUSED **",
                 "All relays OFF",
-                "Press Pin13 to resume");
+                "Press PinA0 to resume");
 }
 
 void DisplayManager::showResumeMessage() {
@@ -190,16 +191,24 @@ String DisplayManager::formatTime(unsigned long milliseconds) {
 String DisplayManager::formatPhoneStatus(const RingerManager* ringerManager) {
     String status = "";
     
-    for (int i = 0; i < ringerManager->getTotalPhoneCount() && i < 8; i++) {
-        if (i > 0) status += " ";
-        
+    // Limit to 8 phones max to prevent memory issues
+    int maxPhones = min(8, ringerManager->getTotalPhoneCount());
+    
+    // Format: "12345678" where each digit represents phone state
+    // R = Ringing, A = Active, . = Idle
+    for (int i = 0; i < maxPhones; i++) {
         if (ringerManager->isPhoneRinging(i)) {
-            status += "R" + String(i + 1);  // R1, R2, etc. for ringing
+            status += "R";  // Ringing
         } else if (ringerManager->isPhoneActive(i)) {
-            status += "A" + String(i + 1);  // A1, A2, etc. for active
+            status += "A";  // Active
         } else {
-            status += "--";  // Inactive
+            status += ".";  // Idle
         }
+    }
+    
+    // Add phone position labels on remaining space
+    if (status.length() < 20) {
+        status += " [12345678]";  // Shows which position is which phone
     }
     
     return status;

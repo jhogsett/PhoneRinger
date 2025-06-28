@@ -148,24 +148,25 @@ void RingerManager::printStatus() const {
     int activeCalls = getActiveCallCount();
     int ringingPhones = getRingingPhoneCount();
     
-    Serial.print("Status: ");
+    Serial.print(F("Status: "));
     Serial.print(activeCalls);
-    Serial.print(" active calls, ");
+    Serial.print(F(" active calls, "));
     Serial.print(ringingPhones);
-    Serial.print(" phones ringing out of ");
+    Serial.print(F(" phones ringing out of "));
     Serial.print(phoneCount);
-    Serial.println(" total phones");
+    Serial.println(F(" total phones"));
     
-    // Print individual phone status
-    Serial.print("Phones: ");
-    for (int i = 0; i < phoneCount; i++) {
+    // Print individual phone status (cap at 8 phones for safety)
+    Serial.print(F("Phones: "));
+    int maxPhonesToShow = min(phoneCount, 8);  // Safety cap
+    for (int i = 0; i < maxPhonesToShow; i++) {
         if (ringers[i].isRinging()) {
-            Serial.print("R");
+            Serial.print(F("R"));
         } else if (ringers[i].isActive()) {
-            Serial.print("A");
+            Serial.print(F("A"));
         } else {
-            Serial.print(".");
+            Serial.print(F("."));
         }
     }
-    Serial.println(" (R=Ringing, A=Active, .=Idle)");
+    Serial.println(F(" (R=Ringing, A=Active, .=Idle)"));
 }
