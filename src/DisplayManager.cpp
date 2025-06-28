@@ -9,30 +9,60 @@ DisplayManager::DisplayManager() {
     lastUpdate = 0;
     currentScreen = 0;
     displayNeedsUpdate = true;
+    lcdAvailable = false;  // Will be set to true if LCD initializes successfully
 }
 
 void DisplayManager::initialize() {
     Serial.println("Initializing 20x4 LCD Display...");
     
-    int status;
-    status = lcd.begin(LCD_COLS, LCD_ROWS);
-    if(status) // non zero status means it was unsuccessful
-    {
-        Serial.print("LCD initialization failed with status: ");
-        Serial.println(status);
-        // hd44780 has a fatalError() routine that blinks an led if possible
-        // begin() failed so blink error code using the onboard LED if possible
-        hd44780::fatalError(status); // does not return
-    }
-
-    // Initialization was successful, the backlight should be on now
-    lcd.clear();
+    // Add a timeout to prevent hanging if LCD is not connected
+    Serial.println("Scanning I2C bus for LCD...");
     
-    showStartupMessage();
-    Serial.println("20x4 LCD Display initialized successfully");
+    // Try to initialize with a timeout approach
+    int status = -1;
+    unsigned long startTime = millis();
+    const unsigned long INIT_TIMEOUT = 2000; // 2 second timeout
+    
+    // Attempt LCD initialization with timeout protection
+    bool initSuccess = false;
+    
+    // First, try a simple I2C scan to see if anything responds
+    Wire.begin();
+    Wire.beginTransmission(0x27); // Try common address first
+    if (Wire.endTransmission() == 0) {
+        Serial.println("Found I2C device at 0x27");
+        initSuccess = true;
+    } else {
+        Wire.beginTransmission(0x3F); // Try alternate address
+        if (Wire.endTransmission() == 0) {
+            Serial.println("Found I2C device at 0x3F");
+            initSuccess = true;
+        }
+    }
+    
+    if (initSuccess) {
+        status = lcd.begin(LCD_COLS, LCD_ROWS);
+        if (status == 0) {
+            lcdAvailable = true;  // Mark LCD as available
+            lcd.clear();
+            showStartupMessage();
+            Serial.println("20x4 LCD Display initialized successfully");
+        } else {
+            Serial.print("LCD initialization failed with status: ");
+            Serial.println(status);
+            Serial.println("Continuing without LCD...");
+            lcdAvailable = false;
+        }
+    } else {
+        Serial.println("No I2C LCD found at addresses 0x27 or 0x3F");
+        Serial.println("Continuing without LCD...");
+        lcdAvailable = false;
+    }
 }
 
 void DisplayManager::update(unsigned long currentTime, bool systemPaused, const RingerManager* ringerManager) {
+    if (!lcdAvailable) return; // Skip if LCD not available
+    
     // Determine update interval based on system state
     unsigned long updateInterval = systemPaused ? NORMAL_UPDATE_INTERVAL : FAST_UPDATE_INTERVAL;
     
@@ -49,6 +79,8 @@ void DisplayManager::update(unsigned long currentTime, bool systemPaused, const 
 }
 
 void DisplayManager::setBrightness(uint8_t brightness) {
+    if (!lcdAvailable) return; // Skip if LCD not available
+    
     // hd44780_I2Cexp automatically manages backlight
     // Just turn on/off based on brightness value
     if (brightness > 0) {
@@ -59,12 +91,16 @@ void DisplayManager::setBrightness(uint8_t brightness) {
 }
 
 void DisplayManager::clear() {
+    if (!lcdAvailable) return; // Skip if LCD not available
+    
     lcd.clear();
     displayNeedsUpdate = true;
 }
 
 void DisplayManager::showMessage(const String& line1, const String& line2, 
                                 const String& line3, const String& line4) {
+    if (!lcdAvailable) return; // Skip if LCD not available
+    
     lcd.clear();
     
     if (line1.length() > 0) {
@@ -86,6 +122,8 @@ void DisplayManager::showMessage(const String& line1, const String& line2,
 }
 
 void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused) {
+    if (!lcdAvailable) return; // Skip if LCD not available
+    
     // Line 1: Title and system time
     lcd.setCursor(0, 0);
     lcd.print("Call Center Sim " + formatTime(millis()));
@@ -173,6 +211,8 @@ String DisplayManager::formatActiveCount(const RingerManager* ringerManager) {
 }
 
 void DisplayManager::centerText(String text, int line, int width) {
+    if (!lcdAvailable) return; // Skip if LCD not available
+    
     int padding = (width - text.length()) / 2;
     lcd.setCursor(padding, line);
     lcd.print(text);

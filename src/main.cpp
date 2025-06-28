@@ -1,6 +1,6 @@
 #include "TelephoneRinger.h"
 #include "RingerManager.h"
-// #include "DisplayManager.h"  // Commented out to avoid LCD hanging issues
+#include "DisplayManager.h"
 
 // Hardware pin definitions - Updated for your specific setup
 const int RELAY_PINS[] = {5, 6, 7, 8, 9, 10, 11, 12}; // Digital pins 5-12 for 8-relay module
@@ -21,7 +21,7 @@ const unsigned long DEBOUNCE_DELAY = 50;
 
 // Create the system components
 RingerManager ringerManager;
-// DisplayManager displayManager; // Commented out to avoid LCD hanging issues
+DisplayManager displayManager;
 
 // Function declarations
 void checkPauseButton();
@@ -50,7 +50,7 @@ void setup() {
   ringerManager.initialize(RELAY_PINS, NUM_PHONES, nullptr);
   
   // Initialize the display
-  // displayManager.initialize(); // Commented out to avoid LCD hanging issues
+  displayManager.initialize();
   
   Serial.println("Call Center Simulator Ready!");
   Serial.println("Hardware Configuration:");
@@ -92,8 +92,8 @@ void loop() {
     ringerManager.step(currentTime);
   }
   
-  // Update display (commented out since DisplayManager is not active)
-  // displayManager.update(currentTime, systemPaused, &ringerManager);
+  // Update display
+  displayManager.update(currentTime, systemPaused, &ringerManager);
   
   // Small delay to prevent overwhelming the system
   delay(10);
@@ -121,10 +121,10 @@ void checkPauseButton() {
           digitalWrite(RELAY_PINS[i], HIGH); // HIGH = inactive for active-LOW relay modules
         }
         Serial.println("*** SYSTEM PAUSED - All relays OFF ***");
-        // displayManager.showPauseMessage(); // Commented out since DisplayManager is not active
+        displayManager.showPauseMessage();
       } else {
         Serial.println("*** SYSTEM RESUMED - Calls will restart ***");
-        // displayManager.showResumeMessage(); // Commented out since DisplayManager is not active
+        displayManager.showResumeMessage();
       }
     }
   }

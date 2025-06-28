@@ -33,6 +33,7 @@ public:
 
 private:
     hd44780_I2Cexp lcd; // declare lcd object: auto locate & auto config expander chip
+    bool lcdAvailable;  // Track if LCD is actually working
     unsigned long lastUpdate;
     uint8_t currentScreen;
     bool displayNeedsUpdate;
