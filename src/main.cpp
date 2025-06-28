@@ -1,6 +1,7 @@
 #include "TelephoneRinger.h"
 #include "RingerManager.h"
 #include "DisplayManager.h"
+#include "EncoderManager.h"
 
 // Hardware pin definitions - Updated for your specific setup
 const int RELAY_PINS[] = {5, 6, 7, 8, 9, 10, 11, 12}; // Digital pins 5-12 for 8-relay module
@@ -38,14 +39,16 @@ RingerManager* globalRingerManager = nullptr;
 // Create the system components
 RingerManager ringerManager;
 DisplayManager displayManager;
+EncoderManager encoderManager;
 
 // Function declarations
 void checkPauseButton();
 void updateStatusLED();
 bool canStartNewCall();  // Check if a new call can start (respects concurrent limit)
+void handleEncoderEvents();  // Handle rotary encoder input
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println(F("Call Center Simulator Starting..."));
   Serial.println(F("Hardware: 8-Relay Module + 20x4 LCD + Rotary Encoder + Pause Button"));
   
@@ -77,6 +80,9 @@ void setup() {
   
   // Initialize the display
   displayManager.initialize();
+  
+  // Initialize the encoder
+  encoderManager.initialize(ENCODER_PIN_A, ENCODER_PIN_B, ENCODER_BUTTON);
   
   Serial.println(F("Call Center Simulator Ready!"));
   Serial.println(F("Hardware Configuration:"));
@@ -118,6 +124,9 @@ void loop() {
   // Check pause button
   checkPauseButton();
   
+  // Handle encoder events
+  handleEncoderEvents();
+  
   // Only step the ringer manager if not paused
   if (!systemPaused) {
     ringerManager.step(currentTime);
@@ -136,10 +145,10 @@ void loop() {
 void checkPauseButton() {
   bool currentButtonState = digitalRead(PAUSE_BUTTON);
   
-  // Debug output every 1000ms to see button state
+  // Debug output every 5000ms to see button state (reduced frequency)
   static unsigned long lastDebugTime = 0;
-  if (millis() - lastDebugTime > 1000) {
-    Serial.print(F("Button: "));
+  if (millis() - lastDebugTime > 5000) {
+    Serial.print(F("Pause Button: "));
     Serial.print(currentButtonState ? "HIGH" : "LOW");
     Serial.print(F(" | Paused: "));
     Serial.println(systemPaused ? "YES" : "NO");
@@ -232,4 +241,36 @@ bool canStartNewCall() {
   }
   
   return canStart;
+}
+
+// Handle rotary encoder input
+void handleEncoderEvents() {
+  EncoderManager::EncoderEvent event = encoderManager.update();
+  
+  if (event != EncoderManager::NONE) {
+    Serial.print(F("Encoder Event: "));
+    Serial.println(encoderManager.getEventString(event));
+    
+    // For now, just log the events - we'll add menu functionality next
+    switch (event) {
+      case EncoderManager::CLOCKWISE:
+        Serial.println(F("Action: Would increment setting"));
+        break;
+        
+      case EncoderManager::COUNTER_CLOCKWISE:
+        Serial.println(F("Action: Would decrement setting"));
+        break;
+        
+      case EncoderManager::BUTTON_PRESS:
+        Serial.println(F("Action: Would enter/exit menu or confirm setting"));
+        break;
+        
+      case EncoderManager::BUTTON_LONG_PRESS:
+        Serial.println(F("Action: Would reset to defaults or special function"));
+        break;
+        
+      default:
+        break;
+    }
+  }
 }
