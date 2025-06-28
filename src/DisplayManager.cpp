@@ -1,0 +1,186 @@
+#include "DisplayManager.h"
+#include "RingerManager.h"
+
+// LCD geometry
+const int LCD_COLS = 20;
+const int LCD_ROWS = 4;
+
+DisplayManager::DisplayManager() {
+    lastUpdate = 0;
+    currentScreen = 0;
+    displayNeedsUpdate = true;
+}
+
+void DisplayManager::initialize() {
+    Serial.println("Initializing 20x4 LCD Display...");
+    
+    int status;
+    status = lcd.begin(LCD_COLS, LCD_ROWS);
+    if(status) // non zero status means it was unsuccessful
+    {
+        Serial.print("LCD initialization failed with status: ");
+        Serial.println(status);
+        // hd44780 has a fatalError() routine that blinks an led if possible
+        // begin() failed so blink error code using the onboard LED if possible
+        hd44780::fatalError(status); // does not return
+    }
+
+    // Initialization was successful, the backlight should be on now
+    lcd.clear();
+    
+    showStartupMessage();
+    Serial.println("20x4 LCD Display initialized successfully");
+}
+
+void DisplayManager::update(unsigned long currentTime, bool systemPaused, const RingerManager* ringerManager) {
+    // Determine update interval based on system state
+    unsigned long updateInterval = systemPaused ? NORMAL_UPDATE_INTERVAL : FAST_UPDATE_INTERVAL;
+    
+    if (currentTime - lastUpdate >= updateInterval || displayNeedsUpdate) {
+        if (systemPaused) {
+            showPauseMessage();
+        } else {
+            showStatus(ringerManager, false);
+        }
+        
+        lastUpdate = currentTime;
+        displayNeedsUpdate = false;
+    }
+}
+
+void DisplayManager::setBrightness(uint8_t brightness) {
+    // hd44780_I2Cexp automatically manages backlight
+    // Just turn on/off based on brightness value
+    if (brightness > 0) {
+        lcd.backlight();
+    } else {
+        lcd.noBacklight();
+    }
+}
+
+void DisplayManager::clear() {
+    lcd.clear();
+    displayNeedsUpdate = true;
+}
+
+void DisplayManager::showMessage(const String& line1, const String& line2, 
+                                const String& line3, const String& line4) {
+    lcd.clear();
+    
+    if (line1.length() > 0) {
+        lcd.setCursor(0, 0);
+        lcd.print(padString(line1, 20));
+    }
+    if (line2.length() > 0) {
+        lcd.setCursor(0, 1);
+        lcd.print(padString(line2, 20));
+    }
+    if (line3.length() > 0) {
+        lcd.setCursor(0, 2);
+        lcd.print(padString(line3, 20));
+    }
+    if (line4.length() > 0) {
+        lcd.setCursor(0, 3);
+        lcd.print(padString(line4, 20));
+    }
+}
+
+void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused) {
+    // Line 1: Title and system time
+    lcd.setCursor(0, 0);
+    lcd.print("Call Center Sim " + formatTime(millis()));
+    
+    // Line 2: Active calls and ringing phones
+    lcd.setCursor(0, 1);
+    String statusLine = "Active:" + String(ringerManager->getActiveCallCount()) + 
+                       " Ring:" + String(ringerManager->getRingingPhoneCount()) +
+                       " Tot:" + String(ringerManager->getActivePhoneCount());
+    lcd.print(padString(statusLine, 20));
+    
+    // Line 3: Visual phone status (8 phones, 2 chars each + spaces = 20 chars max)
+    lcd.setCursor(0, 2);
+    String phoneStatus = formatPhoneStatus(ringerManager);
+    lcd.print(padString(phoneStatus, 20));
+    
+    // Line 4: Status message
+    lcd.setCursor(0, 3);
+    if (paused) {
+        centerText("** PAUSED **", 3);
+    } else {
+        String runningMsg = "Running - Pin13=Pause";
+        lcd.print(padString(runningMsg, 20));
+    }
+}
+
+void DisplayManager::showStartupMessage() {
+    showMessage("Call Center Simulator",
+                "Version 2.0",
+                "8-Phone System",
+                "Initializing...");
+}
+
+void DisplayManager::showPauseMessage() {
+    showMessage("Call Center Sim",
+                "** SYSTEM PAUSED **",
+                "All relays OFF",
+                "Press Pin13 to resume");
+}
+
+void DisplayManager::showResumeMessage() {
+    showMessage("Call Center Sim",
+                "** SYSTEM RESUMED **",
+                "Calls restarting...",
+                "");
+    delay(1000); // Show resume message briefly
+    displayNeedsUpdate = true;
+}
+
+String DisplayManager::formatTime(unsigned long milliseconds) {
+    unsigned long seconds = milliseconds / 1000;
+    unsigned long minutes = seconds / 60;
+    seconds = seconds % 60;
+    
+    String timeStr = "";
+    if (minutes < 10) timeStr += "0";
+    timeStr += String(minutes) + ":";
+    if (seconds < 10) timeStr += "0";
+    timeStr += String(seconds);
+    
+    return timeStr;
+}
+
+String DisplayManager::formatPhoneStatus(const RingerManager* ringerManager) {
+    String status = "";
+    
+    for (int i = 0; i < ringerManager->getTotalPhoneCount() && i < 8; i++) {
+        if (i > 0) status += " ";
+        
+        if (ringerManager->isPhoneRinging(i)) {
+            status += "R" + String(i + 1);  // R1, R2, etc. for ringing
+        } else if (ringerManager->isPhoneActive(i)) {
+            status += "A" + String(i + 1);  // A1, A2, etc. for active
+        } else {
+            status += "--";  // Inactive
+        }
+    }
+    
+    return status;
+}
+
+String DisplayManager::formatActiveCount(const RingerManager* ringerManager) {
+    return "A:" + String(ringerManager->getActiveCallCount()) + 
+           " R:" + String(ringerManager->getRingingPhoneCount());
+}
+
+void DisplayManager::centerText(String text, int line, int width) {
+    int padding = (width - text.length()) / 2;
+    lcd.setCursor(padding, line);
+    lcd.print(text);
+}
+
+String DisplayManager::padString(String str, int length) {
+    while (str.length() < length) {
+        str += " ";
+    }
+    return str.substring(0, length); // Truncate if too long
+}
