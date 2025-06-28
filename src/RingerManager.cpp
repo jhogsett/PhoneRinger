@@ -72,6 +72,17 @@ void RingerManager::stopAllCalls() {
     }
 }
 
+void RingerManager::setCanStartCallCallback(bool (*callback)()) {
+    // This method sets the callback for the manager itself (future use)
+    // For now, we'll implement the method that sets it for all phones
+}
+
+void RingerManager::setCanStartCallCallbackForAllPhones(bool (*callback)()) {
+    for (int i = 0; i < phoneCount; i++) {
+        ringers[i].setCanStartCallCallback(callback);
+    }
+}
+
 int RingerManager::getActiveCallCount() const {
     int count = 0;
     for (int i = 0; i < phoneCount; i++) {
@@ -169,4 +180,10 @@ void RingerManager::printStatus() const {
         }
     }
     Serial.println(F(" (R=Ringing, A=Active, .=Idle)"));
+    
+    // Show concurrent limit information
+    Serial.print(F("Concurrent: "));
+    Serial.print(activeCalls);
+    Serial.print(F(" active (limit enforced by callback system)"));
+    Serial.println();
 }

@@ -17,7 +17,7 @@ public:
     void initialize();
     
     // Update display content
-    void update(unsigned long currentTime, bool systemPaused, const RingerManager* ringerManager);
+    void update(unsigned long currentTime, bool systemPaused, const RingerManager* ringerManager, int maxConcurrent = -1);
     
     // Display control
     void setBrightness(uint8_t brightness);
@@ -26,7 +26,7 @@ public:
                     const String& line3 = "", const String& line4 = "");
     
     // Display specific screens
-    void showStatus(const RingerManager* ringerManager, bool paused);
+    void showStatus(const RingerManager* ringerManager, bool paused, int maxConcurrent = -1);
     void showStartupMessage();
     void showPauseMessage();
     void showResumeMessage();

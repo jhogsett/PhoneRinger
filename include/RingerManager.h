@@ -33,6 +33,12 @@ public:
     // Stop all calls
     void stopAllCalls();
     
+    // Set callback for checking if new calls can start
+    void setCanStartCallCallback(bool (*callback)());
+    
+    // Set callback for all phones to check concurrent limit
+    void setCanStartCallCallbackForAllPhones(bool (*callback)());
+    
     // Get status information
     int getActiveCallCount() const;
     int getRingingPhoneCount() const;

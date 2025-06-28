@@ -6,6 +6,12 @@
 const int RELAY_PINS[] = {5, 6, 7, 8, 9, 10, 11, 12}; // Digital pins 5-12 for 8-relay module
 const int NUM_PHONES = 8;
 
+// Configuration - Power Management
+#define MAX_CONCURRENT_ACTIVE_PHONES 4  // Maximum phones that can be active simultaneously
+                                         // Reduce this value for power supply testing (1-8)
+                                         // Set to 1 for single-phone testing
+                                         // Set to 8 to disable concurrent limiting
+
 // UI Hardware pins
 const int ENCODER_PIN_A = 2;      // Encoder A
 const int ENCODER_PIN_B = 3;      // Encoder B  
@@ -26,6 +32,9 @@ bool statusLedState = false;
 unsigned long lastStatusLedToggle = 0;
 const unsigned long PAUSE_BLINK_INTERVAL = 100;  // 100ms = 10Hz toggle = 5Hz blink rate
 
+// Global access to ringer manager for concurrent phone limit checking
+RingerManager* globalRingerManager = nullptr;
+
 // Create the system components
 RingerManager ringerManager;
 DisplayManager displayManager;
@@ -33,6 +42,7 @@ DisplayManager displayManager;
 // Function declarations
 void checkPauseButton();
 void updateStatusLED();
+bool canStartNewCall();  // Check if a new call can start (respects concurrent limit)
 
 void setup() {
   Serial.begin(9600);
@@ -59,6 +69,12 @@ void setup() {
   // Initialize the ringer manager with phone instances (using nullptr for config for now)
   ringerManager.initialize(RELAY_PINS, NUM_PHONES, nullptr);
   
+  // Set global pointer for concurrent phone limit checking
+  globalRingerManager = &ringerManager;
+  
+  // Set callback for each phone to check concurrent limit
+  ringerManager.setCanStartCallCallbackForAllPhones(canStartNewCall);
+  
   // Initialize the display
   displayManager.initialize();
   
@@ -75,6 +91,9 @@ void setup() {
   Serial.println(F("- Pause button on pin A0"));
   Serial.println(F("- Status LED on pin 13 (onboard)"));
   Serial.println(F("- 20x4 LCD on I2C (A4/A5)"));
+  Serial.print(F("- Concurrent phone limit: "));
+  Serial.print(MAX_CONCURRENT_ACTIVE_PHONES);
+  Serial.println(F(" phones maximum"));
   Serial.println(F("Press pause button (pin A0) to stop/start all activity"));
   Serial.println(F("Status LED: ON=phones ringing, Fast Blink=paused, OFF=idle"));
   
@@ -105,7 +124,7 @@ void loop() {
   }
   
   // Update display
-  displayManager.update(currentTime, systemPaused, &ringerManager);
+  displayManager.update(currentTime, systemPaused, &ringerManager, MAX_CONCURRENT_ACTIVE_PHONES);
   
   // Update status LED
   updateStatusLED();
@@ -192,4 +211,25 @@ void updateStatusLED() {
       digitalWrite(STATUS_LED, statusLedState ? HIGH : LOW);
     }
   }
+}
+
+// Check if a new call can start (respects concurrent phone limit)
+bool canStartNewCall() {
+  if (globalRingerManager == nullptr) {
+    return false;  // Safety check
+  }
+  
+  int currentActivePhones = globalRingerManager->getActiveCallCount();
+  bool canStart = currentActivePhones < MAX_CONCURRENT_ACTIVE_PHONES;
+  
+  // Optional debug output (can be commented out for production)
+  if (!canStart) {
+    Serial.print(F("Concurrent limit reached: "));
+    Serial.print(currentActivePhones);
+    Serial.print(F("/"));
+    Serial.print(MAX_CONCURRENT_ACTIVE_PHONES);
+    Serial.println(F(" phones already active"));
+  }
+  
+  return canStart;
 }

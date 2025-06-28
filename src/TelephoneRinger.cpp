@@ -11,6 +11,7 @@ TelephoneRinger::TelephoneRinger() {
     useUKRingStyle = false;
     waitDuration = 0;
     systemConfig = nullptr;
+    canStartCallCallback = nullptr;
     currentRingOnDuration = 2000;   // Default 2 seconds
     currentRingOffDuration = 4000;  // Default 4 seconds
 }
@@ -30,14 +31,25 @@ void TelephoneRinger::initialize(int pin, const SystemConfig* config) {
     Serial.println(relayPin);
 }
 
+void TelephoneRinger::setCanStartCallCallback(CanStartCallCallback callback) {
+    canStartCallCallback = callback;
+}
+
 void TelephoneRinger::step(unsigned long currentTime) {
     unsigned long elapsed = currentTime - lastStateChange;
     
     switch (state) {
         case IDLE:
-            // Check if it's time to start a new call
+            // Check if it's time to start a new call AND if we're allowed to start one
             if (elapsed >= waitDuration) {
-                startCall();
+                // Check if callback allows starting a new call
+                if (canStartCallCallback == nullptr || canStartCallCallback()) {
+                    startCall();
+                } else {
+                    // Can't start a call now due to concurrent limit, wait a bit longer
+                    waitDuration = getRandomWaitTime() / 4;  // Shorter wait before trying again
+                    lastStateChange = currentTime;
+                }
             }
             break;
             

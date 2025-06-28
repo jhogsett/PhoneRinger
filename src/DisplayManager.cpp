@@ -60,7 +60,7 @@ void DisplayManager::initialize() {
     }
 }
 
-void DisplayManager::update(unsigned long currentTime, bool systemPaused, const RingerManager* ringerManager) {
+void DisplayManager::update(unsigned long currentTime, bool systemPaused, const RingerManager* ringerManager, int maxConcurrent) {
     if (!lcdAvailable) return; // Skip if LCD not available
     
     // Determine update interval based on system state
@@ -70,7 +70,7 @@ void DisplayManager::update(unsigned long currentTime, bool systemPaused, const 
         if (systemPaused) {
             showPauseMessage();
         } else {
-            showStatus(ringerManager, false);
+            showStatus(ringerManager, false, maxConcurrent);
         }
         
         lastUpdate = currentTime;
@@ -121,7 +121,7 @@ void DisplayManager::showMessage(const String& line1, const String& line2,
     }
 }
 
-void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused) {
+void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused, int maxConcurrent) {
     if (!lcdAvailable) return; // Skip if LCD not available
     
     // Line 1: Title and system time (20 chars max: "CallCenter  00:00")
@@ -129,11 +129,17 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused)
     String titleLine = "CallCenter  " + formatTime(millis());
     lcd.print(padString(titleLine, 20));
     
-    // Line 2: Active calls and ringing phones (20 chars max: "A:0 R:0 Tot:8      ")
+    // Line 2: Active calls and ringing phones with concurrent limit (20 chars max)
+    // Format: "A:0 R:0 Tot:8 Max:4" or "A:0 R:0 Tot:8" if no limit
     lcd.setCursor(0, 1);
     String statusLine = "A:" + String(ringerManager->getActiveCallCount()) + 
                        " R:" + String(ringerManager->getRingingPhoneCount()) +
                        " Tot:" + String(ringerManager->getActivePhoneCount());
+    
+    if (maxConcurrent > 0 && maxConcurrent < ringerManager->getTotalPhoneCount()) {
+        statusLine += " Max:" + String(maxConcurrent);
+    }
+    
     lcd.print(padString(statusLine, 20));
     
     // Line 3: Visual phone status (20 chars max for 8 phones)

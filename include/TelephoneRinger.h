@@ -6,6 +6,9 @@
 // Forward declaration
 struct SystemConfig;
 
+// Callback function type for checking if a new call can start
+typedef bool (*CanStartCallCallback)();
+
 class TelephoneRinger {
 public:
     // Constructor
@@ -13,6 +16,9 @@ public:
     
     // Initialize with relay pin and configuration
     void initialize(int relayPin, const SystemConfig* config);
+    
+    // Set callback for checking if new calls are allowed
+    void setCanStartCallCallback(CanStartCallCallback callback);
     
     // Step the state machine with current time
     void step(unsigned long currentTime);
@@ -56,6 +62,9 @@ private:
     
     // Configuration reference
     const SystemConfig* systemConfig;
+    
+    // Callback for checking if new calls are allowed
+    CanStartCallCallback canStartCallCallback;
     
     // Current timing values (may vary based on ring style)
     unsigned long currentRingOnDuration;
