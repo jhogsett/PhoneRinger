@@ -11,6 +11,7 @@ const int ENCODER_PIN_A = 2;      // Encoder A
 const int ENCODER_PIN_B = 3;      // Encoder B  
 const int ENCODER_BUTTON = 4;     // Encoder button
 const int PAUSE_BUTTON = A0;      // System pause button (moved from pin 13)
+const int STATUS_LED = 13;        // System status LED (onboard LED)
 // I2C pins A4 (SDA) and A5 (SCL) for 20x4 LCD display
 
 // System state
@@ -20,12 +21,18 @@ bool pauseButtonPressed = false;   // Track if button was just pressed
 unsigned long lastPauseDebounce = 0;
 const unsigned long DEBOUNCE_DELAY = 50;
 
+// Status LED variables
+bool statusLedState = false;
+unsigned long lastStatusLedToggle = 0;
+const unsigned long PAUSE_BLINK_INTERVAL = 100;  // 100ms = 10Hz toggle = 5Hz blink rate
+
 // Create the system components
 RingerManager ringerManager;
 DisplayManager displayManager;
 
 // Function declarations
 void checkPauseButton();
+void updateStatusLED();
 
 void setup() {
   Serial.begin(9600);
@@ -46,6 +53,8 @@ void setup() {
   pinMode(ENCODER_PIN_B, INPUT_PULLUP);
   pinMode(ENCODER_BUTTON, INPUT_PULLUP);
   pinMode(PAUSE_BUTTON, INPUT_PULLUP);
+  pinMode(STATUS_LED, OUTPUT);
+  digitalWrite(STATUS_LED, LOW);  // Start with status LED off
   
   // Initialize the ringer manager with phone instances (using nullptr for config for now)
   ringerManager.initialize(RELAY_PINS, NUM_PHONES, nullptr);
@@ -64,8 +73,10 @@ void setup() {
   Serial.println();
   Serial.println(F("- Rotary encoder on pins 2,3,4"));
   Serial.println(F("- Pause button on pin A0"));
+  Serial.println(F("- Status LED on pin 13 (onboard)"));
   Serial.println(F("- 20x4 LCD on I2C (A4/A5)"));
   Serial.println(F("Press pause button (pin A0) to stop/start all activity"));
+  Serial.println(F("Status LED: ON=phones ringing, Fast Blink=paused, OFF=idle"));
   
   // Test each relay briefly to verify connections
   Serial.println(F("Testing relay connections..."));
@@ -95,6 +106,9 @@ void loop() {
   
   // Update display
   displayManager.update(currentTime, systemPaused, &ringerManager);
+  
+  // Update status LED
+  updateStatusLED();
   
   // Small delay to prevent overwhelming the system
   delay(10);
@@ -155,4 +169,27 @@ void checkPauseButton() {
   
   // Update the last button state
   lastPauseButtonState = currentButtonState;
+}
+
+void updateStatusLED() {
+  unsigned long currentTime = millis();
+  
+  if (systemPaused) {
+    // System is paused - blink at 5 Hz (100ms toggle interval)
+    if (currentTime - lastStatusLedToggle >= PAUSE_BLINK_INTERVAL) {
+      statusLedState = !statusLedState;
+      digitalWrite(STATUS_LED, statusLedState ? HIGH : LOW);
+      lastStatusLedToggle = currentTime;
+    }
+  } else {
+    // System is running - solid ON if any phone is ringing, OFF if idle
+    int ringingPhones = ringerManager.getRingingPhoneCount();
+    bool shouldBeOn = (ringingPhones > 0);
+    
+    // Only update LED if state needs to change (avoid unnecessary writes)
+    if (statusLedState != shouldBeOn) {
+      statusLedState = shouldBeOn;
+      digitalWrite(STATUS_LED, statusLedState ? HIGH : LOW);
+    }
+  }
 }
