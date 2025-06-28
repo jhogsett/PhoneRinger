@@ -18,7 +18,7 @@ public:
     EncoderManager();
     
     // Initialize encoder pins
-    void initialize(int pinA, int pinB, int buttonPin);
+    void initialize(int pinA, int pinB, int buttonPin, bool enableInitOutput = true);
     
     // Call this frequently in main loop to check for events
     EncoderEvent update();

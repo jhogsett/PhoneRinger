@@ -17,7 +17,7 @@ EncoderManager::EncoderManager() {
     lastDebugPrint = 0;
 }
 
-void EncoderManager::initialize(int pinA, int pinB, int buttonPin) {
+void EncoderManager::initialize(int pinA, int pinB, int buttonPin, bool enableInitOutput) {
     encoderPinA = pinA;
     encoderPinB = pinB;
     encoderButtonPin = buttonPin;
@@ -34,13 +34,15 @@ void EncoderManager::initialize(int pinA, int pinB, int buttonPin) {
     lastRawButtonState = lastButtonState;
     currentButtonState = lastButtonState;
     
-    Serial.println(F("EncoderManager initialized"));
-    Serial.print(F("Pin A: "));
-    Serial.print(encoderPinA);
-    Serial.print(F(", Pin B: "));
-    Serial.print(encoderPinB);
-    Serial.print(F(", Button: "));
-    Serial.println(encoderButtonPin);
+    if (enableInitOutput) {
+        Serial.println(F("EncoderManager initialized"));
+        Serial.print(F("Pin A: "));
+        Serial.print(encoderPinA);
+        Serial.print(F(", Pin B: "));
+        Serial.print(encoderPinB);
+        Serial.print(F(", Button: "));
+        Serial.println(encoderButtonPin);
+    }
 }
 
 EncoderManager::EncoderEvent EncoderManager::update() {

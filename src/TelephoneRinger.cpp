@@ -10,15 +10,17 @@ TelephoneRinger::TelephoneRinger() {
     finalRingCutShort = false;
     useUKRingStyle = false;
     waitDuration = 0;
+    enableSerialOutput = true;  // Default to enabled
     systemConfig = nullptr;
     canStartCallCallback = nullptr;
     currentRingOnDuration = 2000;   // Default 2 seconds
     currentRingOffDuration = 4000;  // Default 4 seconds
 }
 
-void TelephoneRinger::initialize(int pin, const SystemConfig* config) {
+void TelephoneRinger::initialize(int pin, const SystemConfig* config, bool enableSerialOutput) {
     relayPin = pin;
     systemConfig = config;
+    this->enableSerialOutput = enableSerialOutput;  // Store the flag
     state = IDLE;
     lastStateChange = millis();
     useUKRingStyle = false;
@@ -27,8 +29,10 @@ void TelephoneRinger::initialize(int pin, const SystemConfig* config) {
     currentRingOffDuration = 4000;  // 4 seconds
     // Start with a random delay before first call
     waitDuration = getRandomWaitTime();
-    Serial.print("Phone initialized on pin ");
-    Serial.println(relayPin);
+    if (enableSerialOutput) {
+        Serial.print("Phone initialized on pin ");
+        Serial.println(relayPin);
+    }
 }
 
 void TelephoneRinger::setCanStartCallCallback(CanStartCallCallback callback) {
@@ -62,29 +66,35 @@ void TelephoneRinger::step(unsigned long currentTime) {
                 if (currentRingCount == totalRingsToMake && finalRingCutShort) {
                     // Cut the ring short by 25-75% (random)
                     ringDuration = currentRingOnDuration * random(25, 76) / 100;
-                    Serial.print("Phone pin ");
-                    Serial.print(relayPin);
-                    Serial.print(" final ring cut short to ");
-                    Serial.print(ringDuration);
-                    Serial.println("ms");
+                    if (enableSerialOutput) {
+                        Serial.print("Phone pin ");
+                        Serial.print(relayPin);
+                        Serial.print(" final ring cut short to ");
+                        Serial.print(ringDuration);
+                        Serial.println("ms");
+                    }
                 }
                 
                 if (elapsed >= ringDuration) {
                     setRelayState(false); // Turn off ring
-                    Serial.print("Phone pin ");
-                    Serial.print(relayPin);
-                    Serial.print(" ring ");
-                    Serial.print(currentRingCount);
-                    Serial.print("/");
-                    Serial.print(totalRingsToMake);
-                    Serial.println(" OFF");
+                    if (enableSerialOutput) {
+                        Serial.print("Phone pin ");
+                        Serial.print(relayPin);
+                        Serial.print(" ring ");
+                        Serial.print(currentRingCount);
+                        Serial.print("/");
+                        Serial.print(totalRingsToMake);
+                        Serial.println(" OFF");
+                    }
                     
                     if (currentRingCount >= totalRingsToMake) {
                         // Call sequence complete
                         state = CALL_ANSWERED;
-                        Serial.print("Phone pin ");
-                        Serial.print(relayPin);
-                        Serial.println(" call complete");
+                        if (enableSerialOutput) {
+                            Serial.print("Phone pin ");
+                            Serial.print(relayPin);
+                            Serial.println(" call complete");
+                        }
                     } else {
                         // More rings to go
                         state = RING_OFF;
@@ -98,12 +108,14 @@ void TelephoneRinger::step(unsigned long currentTime) {
             // Check if silence duration is complete
             if (elapsed >= currentRingOffDuration) {
                 currentRingCount++;
-                Serial.print("Phone pin ");
-                Serial.print(relayPin);
-                Serial.print(" starting ring ");
-                Serial.print(currentRingCount);
-                Serial.print("/");
-                Serial.println(totalRingsToMake);
+                if (enableSerialOutput) {
+                    Serial.print("Phone pin ");
+                    Serial.print(relayPin);
+                    Serial.print(" starting ring ");
+                    Serial.print(currentRingCount);
+                    Serial.print("/");
+                    Serial.println(totalRingsToMake);
+                }
                 setRelayState(true); // Turn on next ring
                 state = RING_ON;
                 lastStateChange = currentTime;
@@ -116,11 +128,13 @@ void TelephoneRinger::step(unsigned long currentTime) {
                 state = WAITING;
                 waitDuration = getRandomWaitTime();
                 lastStateChange = currentTime;
-                Serial.print("Phone pin ");
-                Serial.print(relayPin);
-                Serial.print(" waiting ");
-                Serial.print(waitDuration);
-                Serial.println("ms for next call");
+                if (enableSerialOutput) {
+                    Serial.print("Phone pin ");
+                    Serial.print(relayPin);
+                    Serial.print(" waiting ");
+                    Serial.print(waitDuration);
+                    Serial.println("ms for next call");
+                }
             }
             break;
             
@@ -130,9 +144,11 @@ void TelephoneRinger::step(unsigned long currentTime) {
                 state = IDLE;
                 waitDuration = getRandomWaitTime();
                 lastStateChange = currentTime;
-                Serial.print("Phone pin ");
-                Serial.print(relayPin);
-                Serial.println(" ready for next call");
+                if (enableSerialOutput) {
+                    Serial.print("Phone pin ");
+                    Serial.print(relayPin);
+                    Serial.println(" ready for next call");
+                }
             }
             break;
     }
@@ -146,15 +162,17 @@ void TelephoneRinger::startCall() {
     // 50% chance that the final ring gets cut short (to simulate someone answering)
     finalRingCutShort = (random(100) < 50);
     
-    Serial.print("Phone on pin ");
-    Serial.print(relayPin);
-    Serial.print(" starting call: ");
-    Serial.print(totalRingsToMake);
-    Serial.print(" rings");
-    if (finalRingCutShort) {
-        Serial.print(" (last ring may be cut short)");
+    if (enableSerialOutput) {
+        Serial.print("Phone on pin ");
+        Serial.print(relayPin);
+        Serial.print(" starting call: ");
+        Serial.print(totalRingsToMake);
+        Serial.print(" rings");
+        if (finalRingCutShort) {
+            Serial.print(" (last ring may be cut short)");
+        }
+        Serial.println();
     }
-    Serial.println();
     
     setRelayState(true); // Turn on first ring
     state = RING_ON;
@@ -211,10 +229,12 @@ void TelephoneRinger::setRelayState(bool active) {
     if (relayPin >= 0) {
         // Most relay modules are active LOW, so invert the logic
         digitalWrite(relayPin, active ? LOW : HIGH);
-        Serial.print("Relay pin ");
-        Serial.print(relayPin);
-        Serial.print(" set to ");
-        Serial.println(active ? "ON (LOW)" : "OFF (HIGH)");
+        if (enableSerialOutput) {
+            Serial.print("Relay pin ");
+            Serial.print(relayPin);
+            Serial.print(" set to ");
+            Serial.println(active ? "ON (LOW)" : "OFF (HIGH)");
+        }
     }
 }
 
@@ -223,5 +243,7 @@ unsigned long TelephoneRinger::getRandomWaitTime() {
 }
 
 void TelephoneRinger::debugPrint(const String& message) {
-    Serial.println(message); // Always print for now
+    if (enableSerialOutput) {
+        Serial.println(message);
+    }
 }

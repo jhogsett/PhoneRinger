@@ -14,7 +14,7 @@ public:
     DisplayManager();
     
     // Initialize display
-    void initialize();
+    void initialize(bool enableSerialOutput = true);
     
     // Update display content
     void update(unsigned long currentTime, bool systemPaused, const RingerManager* ringerManager, int maxConcurrent = -1);

@@ -15,7 +15,7 @@ public:
     TelephoneRinger();
     
     // Initialize with relay pin and configuration
-    void initialize(int relayPin, const SystemConfig* config);
+    void initialize(int relayPin, const SystemConfig* config, bool enableSerialOutput = true);
     
     // Set callback for checking if new calls are allowed
     void setCanStartCallCallback(CanStartCallCallback callback);
@@ -59,6 +59,7 @@ private:
     bool finalRingCutShort;
     bool useUKRingStyle;
     unsigned long waitDuration;
+    bool enableSerialOutput;  // Flag to control serial output
     
     // Configuration reference
     const SystemConfig* systemConfig;

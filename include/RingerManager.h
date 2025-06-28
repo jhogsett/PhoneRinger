@@ -16,7 +16,7 @@ public:
     ~RingerManager();
     
     // Initialize with array of relay pins and configuration
-    void initialize(const int* relayPins, int numPhones, const SystemConfig* config);
+    void initialize(const int* relayPins, int numPhones, const SystemConfig* config, bool enableSerialOutput = true);
     
     // Step all ringers with current time
     void step(unsigned long currentTime);
@@ -62,6 +62,7 @@ private:
     int phoneCount;
     const SystemConfig* systemConfig;
     unsigned long lastStatusPrint;
+    bool enableSerialOutput;  // Flag to control serial output
     
     static const unsigned long STATUS_PRINT_INTERVAL = 10000; // Print status every 10 seconds
     

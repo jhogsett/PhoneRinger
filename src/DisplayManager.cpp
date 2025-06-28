@@ -12,11 +12,15 @@ DisplayManager::DisplayManager() {
     lcdAvailable = false;  // Will be set to true if LCD initializes successfully
 }
 
-void DisplayManager::initialize() {
-    Serial.println("Initializing 20x4 LCD Display...");
+void DisplayManager::initialize(bool enableSerialOutput) {
+    if (enableSerialOutput) {
+        Serial.println("Initializing 20x4 LCD Display...");
+    }
     
     // Add a timeout to prevent hanging if LCD is not connected
-    Serial.println("Scanning I2C bus for LCD...");
+    if (enableSerialOutput) {
+        Serial.println("Scanning I2C bus for LCD...");
+    }
     
     // Try to initialize with a timeout approach
     int status = -1;
@@ -30,12 +34,16 @@ void DisplayManager::initialize() {
     Wire.begin();
     Wire.beginTransmission(0x27); // Try common address first
     if (Wire.endTransmission() == 0) {
-        Serial.println("Found I2C device at 0x27");
+        if (enableSerialOutput) {
+            Serial.println("Found I2C device at 0x27");
+        }
         initSuccess = true;
     } else {
         Wire.beginTransmission(0x3F); // Try alternate address
         if (Wire.endTransmission() == 0) {
-            Serial.println("Found I2C device at 0x3F");
+            if (enableSerialOutput) {
+                Serial.println("Found I2C device at 0x3F");
+            }
             initSuccess = true;
         }
     }
@@ -46,16 +54,22 @@ void DisplayManager::initialize() {
             lcdAvailable = true;  // Mark LCD as available
             lcd.clear();
             showStartupMessage();
-            Serial.println("20x4 LCD Display initialized successfully");
+            if (enableSerialOutput) {
+                Serial.println("20x4 LCD Display initialized successfully");
+            }
         } else {
-            Serial.print("LCD initialization failed with status: ");
-            Serial.println(status);
-            Serial.println("Continuing without LCD...");
+            if (enableSerialOutput) {
+                Serial.print("LCD initialization failed with status: ");
+                Serial.println(status);
+                Serial.println("Continuing without LCD...");
+            }
             lcdAvailable = false;
         }
     } else {
-        Serial.println("No I2C LCD found at addresses 0x27 or 0x3F");
-        Serial.println("Continuing without LCD...");
+        if (enableSerialOutput) {
+            Serial.println("No I2C LCD found at addresses 0x27 or 0x3F");
+            Serial.println("Continuing without LCD...");
+        }
         lcdAvailable = false;
     }
 }

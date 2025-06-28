@@ -5,6 +5,7 @@ RingerManager::RingerManager() {
     ringers = nullptr;
     phoneCount = 0;
     lastStatusPrint = 0;
+    enableSerialOutput = true;  // Default to enabled
 }
 
 RingerManager::~RingerManager() {
@@ -13,26 +14,29 @@ RingerManager::~RingerManager() {
     }
 }
 
-void RingerManager::initialize(const int* relayPins, int numPhones, const SystemConfig* config) {
+void RingerManager::initialize(const int* relayPins, int numPhones, const SystemConfig* config, bool enableSerialOutput) {
     // Clean up any existing ringers
     if (ringers) {
         delete[] ringers;
     }
     
+    this->enableSerialOutput = enableSerialOutput;  // Store the flag
     phoneCount = numPhones;
     systemConfig = config;
     ringers = new TelephoneRinger[phoneCount];
     
     // Initialize each ringer with its relay pin and configuration
     for (int i = 0; i < phoneCount; i++) {
-        ringers[i].initialize(relayPins[i], config);
+        ringers[i].initialize(relayPins[i], config, enableSerialOutput);
     }
     
     lastStatusPrint = millis();
     
-    Serial.print("RingerManager initialized with ");
-    Serial.print(phoneCount);
-    Serial.println(" phones");
+    if (enableSerialOutput) {
+        Serial.print("RingerManager initialized with ");
+        Serial.print(phoneCount);
+        Serial.println(" phones");
+    }
 }
 
 void RingerManager::step(unsigned long currentTime) {
@@ -41,8 +45,8 @@ void RingerManager::step(unsigned long currentTime) {
         ringers[i].step(currentTime);
     }
     
-    // Periodically print status
-    if (currentTime - lastStatusPrint >= STATUS_PRINT_INTERVAL) {
+    // Periodically print status only if serial output is enabled
+    if (enableSerialOutput && currentTime - lastStatusPrint >= STATUS_PRINT_INTERVAL) {
         printStatus();
         lastStatusPrint = currentTime;
     }
@@ -151,11 +155,15 @@ String RingerManager::getStatusLine2() const {
 }
 
 void RingerManager::debugPrint(const String& message) const {
-    // For now, always print. In future, respect systemConfig->debugOutput
-    Serial.println(message);
+    // Only print if serial output is enabled
+    if (enableSerialOutput) {
+        Serial.println(message);
+    }
 }
 
 void RingerManager::printStatus() const {
+    if (!enableSerialOutput) return;  // Don't print if serial output is disabled
+    
     int activeCalls = getActiveCallCount();
     int ringingPhones = getRingingPhoneCount();
     

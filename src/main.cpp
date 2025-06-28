@@ -13,6 +13,26 @@ const int NUM_PHONES = 8;
                                          // Set to 1 for single-phone testing
                                          // Set to 8 to disable concurrent limiting
 
+// Debug Mode - Set to true to silence normal operation serial output
+#define DEBUG_ENCODER_MODE true  // Only show encoder events when true
+
+// Menu System State
+bool inMenu = false;
+int currentMenuItem = 0;
+int maxConcurrentSetting = MAX_CONCURRENT_ACTIVE_PHONES;  // Local copy for menu editing
+
+// Menu Items
+enum MenuItems {
+  MENU_CONCURRENT_LIMIT = 0,
+  MENU_EXIT,
+  MENU_ITEM_COUNT
+};
+
+const char* menuItemNames[] = {
+  "Concurrent Limit",
+  "Exit Menu"
+};
+
 // UI Hardware pins
 const int ENCODER_PIN_A = 2;      // Encoder A
 const int ENCODER_PIN_B = 3;      // Encoder B  
@@ -49,8 +69,10 @@ void handleEncoderEvents();  // Handle rotary encoder input
 
 void setup() {
   Serial.begin(115200);
-  Serial.println(F("Call Center Simulator Starting..."));
-  Serial.println(F("Hardware: 8-Relay Module + 20x4 LCD + Rotary Encoder + Pause Button"));
+  if (!DEBUG_ENCODER_MODE) {
+    Serial.println(F("Call Center Simulator Starting..."));
+    Serial.println(F("Hardware: 8-Relay Module + 20x4 LCD + Rotary Encoder + Pause Button"));
+  }
   
   // Seed the random number generator with analog noise
   randomSeed(analogRead(A0));
@@ -70,7 +92,7 @@ void setup() {
   digitalWrite(STATUS_LED, LOW);  // Start with status LED off
   
   // Initialize the ringer manager with phone instances (using nullptr for config for now)
-  ringerManager.initialize(RELAY_PINS, NUM_PHONES, nullptr);
+  ringerManager.initialize(RELAY_PINS, NUM_PHONES, nullptr, !DEBUG_ENCODER_MODE);
   
   // Set global pointer for concurrent phone limit checking
   globalRingerManager = &ringerManager;
@@ -79,43 +101,54 @@ void setup() {
   ringerManager.setCanStartCallCallbackForAllPhones(canStartNewCall);
   
   // Initialize the display
-  displayManager.initialize();
+  displayManager.initialize(!DEBUG_ENCODER_MODE);
   
   // Initialize the encoder
-  encoderManager.initialize(ENCODER_PIN_A, ENCODER_PIN_B, ENCODER_BUTTON);
+  encoderManager.initialize(ENCODER_PIN_A, ENCODER_PIN_B, ENCODER_BUTTON, !DEBUG_ENCODER_MODE);
   
-  Serial.println(F("Call Center Simulator Ready!"));
-  Serial.println(F("Hardware Configuration:"));
-  Serial.println(F("- 8 phone lines on pins 5-12"));
-  Serial.print(F("- Actual pin assignments: "));
-  for (int i = 0; i < NUM_PHONES; i++) {
-    Serial.print(RELAY_PINS[i]);
-    if (i < NUM_PHONES - 1) Serial.print(F(", "));
+  if (!DEBUG_ENCODER_MODE) {
+    Serial.println(F("Call Center Simulator Ready!"));
+    Serial.println(F("Hardware Configuration:"));
+    Serial.println(F("- 8 phone lines on pins 5-12"));
+    Serial.print(F("- Actual pin assignments: "));
+    for (int i = 0; i < NUM_PHONES; i++) {
+      Serial.print(RELAY_PINS[i]);
+      if (i < NUM_PHONES - 1) Serial.print(F(", "));
+    }
+    Serial.println();
+    Serial.println(F("- Rotary encoder on pins 2,3,4"));
+    Serial.println(F("- Pause button on pin A0"));
+    Serial.println(F("- Status LED on pin 13 (onboard)"));
+    Serial.println(F("- 20x4 LCD on I2C (A4/A5)"));
+    Serial.print(F("- Concurrent phone limit: "));
+    Serial.print(MAX_CONCURRENT_ACTIVE_PHONES);
+    Serial.println(F(" phones maximum"));
+    Serial.println(F("Press pause button (pin A0) to stop/start all activity"));
+    Serial.println(F("Status LED: ON=phones ringing, Fast Blink=paused, OFF=idle"));
+    
+    // Test each relay briefly to verify connections
+    Serial.println(F("Testing relay connections..."));
+    for (int i = 0; i < NUM_PHONES; i++) {
+      Serial.print(F("Testing relay "));
+      Serial.print(i + 1);
+      Serial.print(F(" on pin "));
+      Serial.println(RELAY_PINS[i]);
+      digitalWrite(RELAY_PINS[i], LOW);  // LOW = active for active-LOW modules
+      delay(200);
+      digitalWrite(RELAY_PINS[i], HIGH); // HIGH = inactive for active-LOW modules
+      delay(100);
+    }
+    Serial.println(F("Relay test complete. Starting normal operation..."));
+  } else {
+    // Silent mode - just do the relay test without serial output
+    for (int i = 0; i < NUM_PHONES; i++) {
+      digitalWrite(RELAY_PINS[i], LOW);  // LOW = active for active-LOW modules
+      delay(200);
+      digitalWrite(RELAY_PINS[i], HIGH); // HIGH = inactive for active-LOW modules
+      delay(100);
+    }
+    Serial.println(F("=== ENCODER DEBUG MODE - Only encoder events will be shown ==="));
   }
-  Serial.println();
-  Serial.println(F("- Rotary encoder on pins 2,3,4"));
-  Serial.println(F("- Pause button on pin A0"));
-  Serial.println(F("- Status LED on pin 13 (onboard)"));
-  Serial.println(F("- 20x4 LCD on I2C (A4/A5)"));
-  Serial.print(F("- Concurrent phone limit: "));
-  Serial.print(MAX_CONCURRENT_ACTIVE_PHONES);
-  Serial.println(F(" phones maximum"));
-  Serial.println(F("Press pause button (pin A0) to stop/start all activity"));
-  Serial.println(F("Status LED: ON=phones ringing, Fast Blink=paused, OFF=idle"));
-  
-  // Test each relay briefly to verify connections
-  Serial.println(F("Testing relay connections..."));
-  for (int i = 0; i < NUM_PHONES; i++) {
-    Serial.print(F("Testing relay "));
-    Serial.print(i + 1);
-    Serial.print(F(" on pin "));
-    Serial.println(RELAY_PINS[i]);
-    digitalWrite(RELAY_PINS[i], LOW);  // LOW = active for active-LOW modules
-    delay(200);
-    digitalWrite(RELAY_PINS[i], HIGH); // HIGH = inactive for active-LOW modules
-    delay(100);
-  }
-  Serial.println(F("Relay test complete. Starting normal operation..."));
 }
 
 void loop() {
@@ -145,24 +178,28 @@ void loop() {
 void checkPauseButton() {
   bool currentButtonState = digitalRead(PAUSE_BUTTON);
   
-  // Debug output every 5000ms to see button state (reduced frequency)
-  static unsigned long lastDebugTime = 0;
-  if (millis() - lastDebugTime > 5000) {
-    Serial.print(F("Pause Button: "));
-    Serial.print(currentButtonState ? "HIGH" : "LOW");
-    Serial.print(F(" | Paused: "));
-    Serial.println(systemPaused ? "YES" : "NO");
-    lastDebugTime = millis();
+  // Debug output every 5000ms to see button state (only if not in encoder debug mode)
+  if (!DEBUG_ENCODER_MODE) {
+    static unsigned long lastDebugTime = 0;
+    if (millis() - lastDebugTime > 5000) {
+      Serial.print(F("Pause Button: "));
+      Serial.print(currentButtonState ? "HIGH" : "LOW");
+      Serial.print(F(" | Paused: "));
+      Serial.println(systemPaused ? "YES" : "NO");
+      lastDebugTime = millis();
+    }
   }
   
   // Simple debounce: if button state changed, reset debounce timer
   if (currentButtonState != lastPauseButtonState) {
     lastPauseDebounce = millis();
     pauseButtonPressed = false; // Reset press flag
-    Serial.print(F("Button changed: "));
-    Serial.print(lastPauseButtonState ? "HIGH" : "LOW");
-    Serial.print(F(" -> "));
-    Serial.println(currentButtonState ? "HIGH" : "LOW");
+    if (!DEBUG_ENCODER_MODE) {
+      Serial.print(F("Button changed: "));
+      Serial.print(lastPauseButtonState ? "HIGH" : "LOW");
+      Serial.print(F(" -> "));
+      Serial.println(currentButtonState ? "HIGH" : "LOW");
+    }
   }
   
   // Check if enough time has passed for debounce
@@ -170,13 +207,17 @@ void checkPauseButton() {
     // If button is pressed (LOW) and we haven't processed this press yet
     if (currentButtonState == LOW && !pauseButtonPressed) {
       pauseButtonPressed = true; // Mark as processed
-      Serial.println(F("*** PAUSE BUTTON PRESSED - TOGGLING STATE ***"));
+      if (!DEBUG_ENCODER_MODE) {
+        Serial.println(F("*** PAUSE BUTTON PRESSED - TOGGLING STATE ***"));
+      }
       
       // Toggle pause state
       systemPaused = !systemPaused;
       
       if (systemPaused) {
-        Serial.println(F("*** SYSTEM PAUSED - Stopping all activity ***"));
+        if (!DEBUG_ENCODER_MODE) {
+          Serial.println(F("*** SYSTEM PAUSED - Stopping all activity ***"));
+        }
         // Stop all calls and turn off all relays immediately
         ringerManager.stopAllCalls();
         for (int i = 0; i < NUM_PHONES; i++) {
@@ -184,7 +225,9 @@ void checkPauseButton() {
         }
         displayManager.showPauseMessage();
       } else {
-        Serial.println(F("*** SYSTEM RESUMED - Activity will restart ***"));
+        if (!DEBUG_ENCODER_MODE) {
+          Serial.println(F("*** SYSTEM RESUMED - Activity will restart ***"));
+        }
         displayManager.showResumeMessage();
       }
     }
@@ -232,7 +275,7 @@ bool canStartNewCall() {
   bool canStart = currentActivePhones < MAX_CONCURRENT_ACTIVE_PHONES;
   
   // Optional debug output (can be commented out for production)
-  if (!canStart) {
+  if (!canStart && !DEBUG_ENCODER_MODE) {
     Serial.print(F("Concurrent limit reached: "));
     Serial.print(currentActivePhones);
     Serial.print(F("/"));
@@ -251,22 +294,30 @@ void handleEncoderEvents() {
     Serial.print(F("Encoder Event: "));
     Serial.println(encoderManager.getEventString(event));
     
-    // For now, just log the events - we'll add menu functionality next
+    // Handle button press for menu toggle
+    if (event == EncoderManager::BUTTON_PRESS) {
+      if (!inMenu) {
+        inMenu = true;
+        Serial.println(F("*** ENTERING MENU MODE ***"));
+      } else {
+        inMenu = false;
+        Serial.println(F("*** EXITING MENU MODE ***"));
+      }
+      return;
+    }
+    
+    // Log other events with menu context
     switch (event) {
       case EncoderManager::CLOCKWISE:
-        Serial.println(F("Action: Would increment setting"));
+        Serial.println(inMenu ? F("MENU: Would increment") : F("NORMAL: Would increment setting"));
         break;
         
       case EncoderManager::COUNTER_CLOCKWISE:
-        Serial.println(F("Action: Would decrement setting"));
-        break;
-        
-      case EncoderManager::BUTTON_PRESS:
-        Serial.println(F("Action: Would enter/exit menu or confirm setting"));
+        Serial.println(inMenu ? F("MENU: Would decrement") : F("NORMAL: Would decrement setting"));
         break;
         
       case EncoderManager::BUTTON_LONG_PRESS:
-        Serial.println(F("Action: Would reset to defaults or special function"));
+        Serial.println(F("Long press: Would reset to defaults"));
         break;
         
       default:
