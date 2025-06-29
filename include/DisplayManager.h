@@ -49,12 +49,17 @@ private:
     char tempMessageText[21];  // Buffer for temporary message
     static const unsigned long TEMP_MESSAGE_DURATION = 800;  // 0.8 seconds
     
-    // Display update intervals
-    static const unsigned long NORMAL_UPDATE_INTERVAL = 500;   // 0.5 seconds
-    static const unsigned long FAST_UPDATE_INTERVAL = 100;     // 0.1 seconds for active changes
-    
+    // Animated storm icon state
+    bool animationEnabled;
+    unsigned long lastAnimationUpdate;
+    uint8_t currentAnimationFrame;
+    static const unsigned long ANIMATION_FRAME_DURATION = 250;  // 4 FPS (250ms per frame)
+    static const uint8_t ANIMATION_FRAME_COUNT = 3;  // 3 frames for retro charm
+
     // Helper methods
     // Note: Legacy String-based methods removed for heap safety
+    void initializeStormAnimation(); // Load custom characters for storm icon
+    void updateStormAnimation(); // Update animation frame if needed
 };
 
 #endif
