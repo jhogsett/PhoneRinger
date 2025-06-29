@@ -2,6 +2,7 @@
 #include "RingerManager.h"
 #include "DisplayManager.h"
 #include "EncoderManager.h"
+#include "SettingsManager.h"
 
 // Hardware pin definitions - Updated for your specific setup
 const int RELAY_PINS[] = {5, 6, 7, 8, 9, 10, 11, 12}; // Digital pins 5-12 for 8-relay module
@@ -79,6 +80,8 @@ void checkPauseButton();
 void updateStatusLED();
 bool canStartNewCall();  // Check if a new call can start (respects concurrent limit)
 void handleEncoderEvents();  // Handle rotary encoder input
+void loadSettingsFromEEPROM();
+void saveSettingsToEEPROM();
 
 void setup() {
   Serial.begin(115200);
@@ -106,8 +109,11 @@ void setup() {
   
   // Initialize the ringer manager with phone instances (using nullptr for config for now)
   ringerManager.initialize(RELAY_PINS, NUM_PHONES, nullptr, !DEBUG_ENCODER_MODE);
+
+  // Load settings from EEPROM (before applying them)
+  loadSettingsFromEEPROM();
   
-  // Set initial active relay count
+  // Set initial active relay count from loaded settings
   ringerManager.setActiveRelayCount(activeRelaySetting);
   
   // Set global pointer for concurrent phone limit checking
@@ -121,6 +127,9 @@ void setup() {
   
   // Initialize the encoder
   encoderManager.initialize(ENCODER_PIN_A, ENCODER_PIN_B, ENCODER_BUTTON, !DEBUG_ENCODER_MODE);
+  
+  // Load settings from EEPROM
+  loadSettingsFromEEPROM();
   
   if (!DEBUG_ENCODER_MODE) {
     Serial.println(F("Call Center Simulator Ready!"));
@@ -344,8 +353,17 @@ void handleEncoderEvents() {
         if (inAdjustmentMode) {
           // We're adjusting a setting - save and return to menu navigation
           Serial.println(F("*** SAVING SETTING & RETURNING TO MENU ***"));
-          Serial.print(F("Concurrent limit saved as: "));
-          Serial.println(maxConcurrentSetting);
+          
+          // Save all settings to EEPROM when any setting is changed
+          saveSettingsToEEPROM();
+          
+          Serial.print(F("Settings saved: Concurrent="));
+          Serial.print(maxConcurrentSetting);
+          Serial.print(F(", Active="));
+          Serial.print(activeRelaySetting);
+          Serial.print(F(", Frequency="));
+          Serial.println(maxCallDelaySetting);
+          
           inAdjustmentMode = false;  // Exit adjustment mode but stay in menu
           // Show the current menu item again
           displayManager.showMessage("MENU MODE", menuItemNames[currentMenuItem], 
@@ -511,5 +529,38 @@ void handleEncoderEvents() {
           break;
       }
     }
+  }
+}
+
+// Function to load settings from EEPROM
+void loadSettingsFromEEPROM() {
+  Settings settings;
+  if (SettingsManager::loadSettings(settings)) {
+    // Successfully loaded settings
+    maxConcurrentSetting = settings.maxConcurrent;
+    activeRelaySetting = settings.activeRelays;  
+    maxCallDelaySetting = settings.maxCallDelay;
+    Serial.println(F("Settings loaded from EEPROM"));
+    Serial.print(F("  Concurrent Limit: ")); Serial.println(maxConcurrentSetting);
+    Serial.print(F("  Active Relays: ")); Serial.println(activeRelaySetting);
+    Serial.print(F("  Call Frequency: ")); Serial.println(maxCallDelaySetting);
+  } else {
+    // Failed to load - using defaults (already set)
+    Serial.println(F("Using default settings (EEPROM invalid/empty)"));
+    saveSettingsToEEPROM(); // Save defaults to EEPROM
+  }
+}
+
+// Function to save settings to EEPROM
+void saveSettingsToEEPROM() {
+  Settings settings;
+  settings.maxConcurrent = maxConcurrentSetting;
+  settings.activeRelays = activeRelaySetting;
+  settings.maxCallDelay = maxCallDelaySetting;
+  
+  if (SettingsManager::saveSettings(settings)) {
+    Serial.println(F("Settings saved to EEPROM"));
+  } else {
+    Serial.println(F("Failed to save settings to EEPROM"));
   }
 }
