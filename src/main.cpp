@@ -89,6 +89,7 @@ void handleEncoderEvents();  // Handle rotary encoder input
 void loadSettingsFromEEPROM();
 void saveSettingsToEEPROM();
 void activateMaximumChaos(); // 🌪️ Maximum Chaos Easter Egg!
+void showRelayAdjustmentFeedback(); // Show brief relay adjustment confirmation
 
 void setup() {
   Serial.begin(115200);
@@ -519,14 +520,33 @@ void handleEncoderEvents() {
           break;
       }
     } else {
-      // Not in menu - normal operation
+      // Not in menu - normal operation mode
+      // Encoder rotation adjusts active relay count directly
       switch (event) {
         case EncoderManager::CLOCKWISE:
-          Serial.println(F("NORMAL: Would increment setting"));
+          if (activeRelaySetting < 8) {
+            activeRelaySetting++;
+            Serial.print(F("OPERATION: Active relays increased to "));
+            Serial.println(activeRelaySetting);
+            // Show brief +1 feedback and save to EEPROM
+            displayManager.showRelayAdjustmentDirection(activeRelaySetting, true);
+            saveSettingsToEEPROM();
+          } else {
+            Serial.println(F("OPERATION: Already at maximum relays (8)"));
+          }
           break;
           
         case EncoderManager::COUNTER_CLOCKWISE:
-          Serial.println(F("NORMAL: Would decrement setting"));
+          if (activeRelaySetting > 0) {
+            activeRelaySetting--;
+            Serial.print(F("OPERATION: Active relays decreased to "));
+            Serial.println(activeRelaySetting);
+            // Show brief -1 feedback and save to EEPROM
+            displayManager.showRelayAdjustmentDirection(activeRelaySetting, false);
+            saveSettingsToEEPROM();
+          } else {
+            Serial.println(F("OPERATION: Already at minimum relays (0)"));
+          }
           break;
           
         case EncoderManager::BUTTON_LONG_PRESS:
@@ -589,4 +609,10 @@ void activateMaximumChaos() {
   
   // Display dramatic chaos message (the only visible feedback)
   displayManager.showChaosMessage();
+}
+
+// 🎛️ QUICK RELAY ADJUSTMENT - Show brief feedback for encoder-based relay adjustment
+void showRelayAdjustmentFeedback() {
+  // Display brief confirmation message
+  displayManager.showRelayAdjustmentMessage(activeRelaySetting);
 }

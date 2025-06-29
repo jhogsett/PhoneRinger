@@ -32,6 +32,8 @@ public:
     void showPauseMessage();
     void showResumeMessage();
     void showChaosMessage(); // Maximum chaos easter egg display
+    void showRelayAdjustmentMessage(int newCount); // Brief relay adjustment feedback
+    void showRelayAdjustmentDirection(int newCount, bool increment); // Show +1/-1 style feedback
 
 private:
     hd44780_I2Cexp lcd; // declare lcd object: auto locate & auto config expander chip
@@ -39,6 +41,12 @@ private:
     unsigned long lastUpdate;
     uint8_t currentScreen;
     bool displayNeedsUpdate;
+    
+    // Temporary message state (non-blocking)
+    bool showingTempMessage;
+    unsigned long tempMessageStartTime;
+    char tempMessageText[21];  // Buffer for temporary message
+    static const unsigned long TEMP_MESSAGE_DURATION = 800;  // 0.8 seconds
     
     // Display update intervals
     static const unsigned long NORMAL_UPDATE_INTERVAL = 500;   // 0.5 seconds

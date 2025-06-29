@@ -11,6 +11,9 @@ DisplayManager::DisplayManager() {
     currentScreen = 0;
     displayNeedsUpdate = true;
     lcdAvailable = false;  // Will be set to true if LCD initializes successfully
+    showingTempMessage = false;
+    tempMessageStartTime = 0;
+    tempMessageText[0] = '\0';
 }
 
 void DisplayManager::initialize(bool enableSerialOutput) {
@@ -157,10 +160,32 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
     globalStringBuffer[20] = '\0';
     lcd.print(globalStringBuffer);
     
-    // Line 2: Available for important messages/alerts (future use)
+    // Line 2: Show temporary message if active, otherwise leave blank for alerts
     lcd.setCursor(0, 1);
-    snprintf(globalStringBuffer, sizeof(globalStringBuffer), "                    ");
-    lcd.print(globalStringBuffer);
+    unsigned long currentTime = millis();
+    
+    // Check if we should show a temporary message
+    if (showingTempMessage) {
+        if (currentTime - tempMessageStartTime < TEMP_MESSAGE_DURATION) {
+            // Still showing temp message
+            snprintf(globalStringBuffer, sizeof(globalStringBuffer), "%s", tempMessageText);
+            int len = strlen(globalStringBuffer);
+            for (int i = len; i < 20; i++) {
+                globalStringBuffer[i] = ' ';
+            }
+            globalStringBuffer[20] = '\0';
+            lcd.print(globalStringBuffer);
+        } else {
+            // Temp message expired, clear it
+            showingTempMessage = false;
+            snprintf(globalStringBuffer, sizeof(globalStringBuffer), "                    ");
+            lcd.print(globalStringBuffer);
+        }
+    } else {
+        // No temp message, show normal blank line for future alerts
+        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "                    ");
+        lcd.print(globalStringBuffer);
+    }
     
     // Line 3: Active calls and ringing phones with enabled relay count (20 chars max)
     // Format: "A:0 R:0 En:8 Max:4" or "A:0 R:0 En:8" if no limit
@@ -268,4 +293,24 @@ void DisplayManager::showChaosMessage() {
                 "BRACE FOR IMPACT!");
     delay(3000); // Show chaos message for 3 seconds
     displayNeedsUpdate = true;
+}
+
+void DisplayManager::showRelayAdjustmentMessage(int newCount) {
+    // Start showing a temporary message (non-blocking)
+    snprintf(tempMessageText, sizeof(tempMessageText), "Relays: %d", newCount);
+    showingTempMessage = true;
+    tempMessageStartTime = millis();
+    displayNeedsUpdate = true; // Trigger immediate display update
+}
+
+void DisplayManager::showRelayAdjustmentDirection(int newCount, bool increment) {
+    // Start showing a temporary directional message (non-blocking)
+    if (increment) {
+        snprintf(tempMessageText, sizeof(tempMessageText), "Relays +1 (%d)", newCount);
+    } else {
+        snprintf(tempMessageText, sizeof(tempMessageText), "Relays -1 (%d)", newCount);
+    }
+    showingTempMessage = true;
+    tempMessageStartTime = millis();
+    displayNeedsUpdate = true; // Trigger immediate display update
 }
