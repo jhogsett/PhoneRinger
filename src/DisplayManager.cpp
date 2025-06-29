@@ -162,37 +162,91 @@ void DisplayManager::showMessage(const char* line1, const char* line2,
 void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused, int maxConcurrent) {
     if (!lcdAvailable) return; // Skip if LCD not available
     
+    // Static buffers to avoid String allocation
+    static char line1Buffer[21];
+    static char line2Buffer[21]; 
+    static char line3Buffer[21];
+    static char line4Buffer[21];
+    
     // Line 1: Title and system time (20 chars max: "CallCenter  00:00")
     lcd.setCursor(0, 0);
-    String titleLine = "CallCenter  " + formatTime(millis());
-    lcd.print(padString(titleLine, 20));
+    unsigned long seconds = millis() / 1000;
+    unsigned long minutes = seconds / 60;
+    seconds = seconds % 60;
+    snprintf(line1Buffer, sizeof(line1Buffer), "CallCenter  %02lu:%02lu", minutes % 100, seconds);
+    // Ensure exactly 20 characters by padding with spaces
+    int len1 = strlen(line1Buffer);
+    for (int i = len1; i < 20; i++) {
+        line1Buffer[i] = ' ';
+    }
+    line1Buffer[20] = '\0';
+    lcd.print(line1Buffer);
     
     // Line 2: Active calls and ringing phones with enabled relay count (20 chars max)
     // Format: "A:0 R:0 En:8 Max:4" or "A:0 R:0 En:8" if no limit
     lcd.setCursor(0, 1);
-    String statusLine = "A:" + String(ringerManager->getActiveCallCount()) + 
-                       " R:" + String(ringerManager->getRingingPhoneCount()) +
-                       " En:" + String(ringerManager->getActivePhoneCount());
-    
     if (maxConcurrent > 0 && maxConcurrent < ringerManager->getTotalPhoneCount()) {
-        statusLine += " Max:" + String(maxConcurrent);
+        snprintf(line2Buffer, sizeof(line2Buffer), "A:%d R:%d En:%d Max:%d", 
+                ringerManager->getActiveCallCount(),
+                ringerManager->getRingingPhoneCount(),
+                ringerManager->getActivePhoneCount(),
+                maxConcurrent);
+    } else {
+        snprintf(line2Buffer, sizeof(line2Buffer), "A:%d R:%d En:%d", 
+                ringerManager->getActiveCallCount(),
+                ringerManager->getRingingPhoneCount(),
+                ringerManager->getActivePhoneCount());
     }
-    
-    lcd.print(padString(statusLine, 20));
+    // Pad to 20 characters
+    int len = strlen(line2Buffer);
+    for (int i = len; i < 20; i++) {
+        line2Buffer[i] = ' ';
+    }
+    line2Buffer[20] = '\0';
+    lcd.print(line2Buffer);
     
     // Line 3: Visual phone status (20 chars max for 8 phones)
     lcd.setCursor(0, 2);
-    String phoneStatus = formatPhoneStatus(ringerManager);
-    lcd.print(padString(phoneStatus, 20));
+    // Create phone status without String allocation
+    for (int i = 0; i < 8 && i < 20; i++) {
+        if (i < ringerManager->getActivePhoneCount()) {
+            if (ringerManager->isPhoneRinging(i)) {
+                line3Buffer[i] = 'R';  // Ringing
+            } else if (ringerManager->isPhoneActive(i)) {
+                line3Buffer[i] = 'A';  // Active
+            } else {
+                line3Buffer[i] = '-';  // Idle
+            }
+        } else {
+            line3Buffer[i] = 'X';  // Disabled
+        }
+    }
+    // Pad remaining characters
+    for (int i = 8; i < 20; i++) {
+        line3Buffer[i] = ' ';
+    }
+    line3Buffer[20] = '\0';
+    lcd.print(line3Buffer);
     
     // Line 4: Status message (20 chars max)
     lcd.setCursor(0, 3);
     if (paused) {
-        centerText("** PAUSED **", 3);
+        snprintf(line4Buffer, sizeof(line4Buffer), "** PAUSED **");
+        // Center the text
+        int textLen = strlen(line4Buffer);
+        int spaces = (20 - textLen) / 2;
+        for (int i = 19; i >= 0; i--) {
+            if (i >= spaces && i < spaces + textLen) {
+                line4Buffer[i] = line4Buffer[i - spaces];
+            } else {
+                line4Buffer[i] = ' ';
+            }
+        }
+        line4Buffer[20] = '\0';
     } else {
-        String runningMsg = "Run - A0=Pause";  // Shortened to fit
-        lcd.print(padString(runningMsg, 20));
+        snprintf(line4Buffer, sizeof(line4Buffer), "Run - A0=Pause      ");
     }
+    lcd.print(line4Buffer);
 }
 
 void DisplayManager::showStartupMessage() {
