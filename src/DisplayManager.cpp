@@ -143,12 +143,12 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
     String titleLine = "CallCenter  " + formatTime(millis());
     lcd.print(padString(titleLine, 20));
     
-    // Line 2: Active calls and ringing phones with concurrent limit (20 chars max)
-    // Format: "A:0 R:0 Tot:8 Max:4" or "A:0 R:0 Tot:8" if no limit
+    // Line 2: Active calls and ringing phones with enabled relay count (20 chars max)
+    // Format: "A:0 R:0 En:8 Max:4" or "A:0 R:0 En:8" if no limit
     lcd.setCursor(0, 1);
     String statusLine = "A:" + String(ringerManager->getActiveCallCount()) + 
                        " R:" + String(ringerManager->getRingingPhoneCount()) +
-                       " Tot:" + String(ringerManager->getActivePhoneCount());
+                       " En:" + String(ringerManager->getActivePhoneCount());
     
     if (maxConcurrent > 0 && maxConcurrent < ringerManager->getTotalPhoneCount()) {
         statusLine += " Max:" + String(maxConcurrent);

@@ -6,6 +6,7 @@ RingerManager::RingerManager() {
     phoneCount = 0;
     lastStatusPrint = 0;
     enableSerialOutput = true;  // Default to enabled
+    activeRelayCount = 8;       // Default to all relays active
 }
 
 RingerManager::~RingerManager() {
@@ -40,8 +41,9 @@ void RingerManager::initialize(const int* relayPins, int numPhones, const System
 }
 
 void RingerManager::step(unsigned long currentTime) {
-    // Step all ringers
-    for (int i = 0; i < phoneCount; i++) {
+    // Step only active relays
+    int activeCount = min(activeRelayCount, phoneCount);
+    for (int i = 0; i < activeCount; i++) {
         ringers[i].step(currentTime);
     }
     
@@ -87,6 +89,15 @@ void RingerManager::setCanStartCallCallbackForAllPhones(bool (*callback)()) {
     }
 }
 
+void RingerManager::setActiveRelayCount(int count) {
+    activeRelayCount = max(0, min(count, phoneCount));
+    
+    // Stop calls on phones that are now inactive
+    for (int i = activeRelayCount; i < phoneCount; i++) {
+        ringers[i].stopCall();
+    }
+}
+
 int RingerManager::getActiveCallCount() const {
     int count = 0;
     for (int i = 0; i < phoneCount; i++) {
@@ -112,9 +123,8 @@ int RingerManager::getTotalPhoneCount() const {
 }
 
 int RingerManager::getActivePhoneCount() const {
-    // For now, return total phone count
-    // In future with configuration system, this would respect systemConfig->activeRelayCount
-    return phoneCount;
+    // Return the number of enabled relays
+    return activeRelayCount;
 }
 
 bool RingerManager::isPhoneRinging(int phoneIndex) const {

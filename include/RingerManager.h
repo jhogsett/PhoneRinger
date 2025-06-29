@@ -39,6 +39,9 @@ public:
     // Set callback for all phones to check concurrent limit
     void setCanStartCallCallbackForAllPhones(bool (*callback)());
     
+    // Set the number of active relays (0-8) - phones beyond this count won't activate
+    void setActiveRelayCount(int count);
+    
     // Get status information
     int getActiveCallCount() const;
     int getRingingPhoneCount() const;
@@ -63,6 +66,7 @@ private:
     const SystemConfig* systemConfig;
     unsigned long lastStatusPrint;
     bool enableSerialOutput;  // Flag to control serial output
+    int activeRelayCount;     // Number of active relays
     
     static const unsigned long STATUS_PRINT_INTERVAL = 10000; // Print status every 10 seconds
     

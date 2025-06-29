@@ -21,19 +21,19 @@ bool inMenu = false;
 bool inAdjustmentMode = false;  // Track if we're adjusting a setting
 int currentMenuItem = 0;
 int maxConcurrentSetting = MAX_CONCURRENT_ACTIVE_PHONES;  // Local copy for menu editing
-int testSetting = 5;  // Dummy test variable (0-9)
+int activeRelaySetting = NUM_PHONES;  // Number of active relays (0-8)
 
 // Menu Items
 enum MenuItems {
   MENU_CONCURRENT_LIMIT = 0,
-  MENU_TEST,  // Dummy test option
+  MENU_ACTIVE_RELAYS,  // Number of active relays (0-8)
   MENU_EXIT,
   MENU_ITEM_COUNT
 };
 
 const char* menuItemNames[] = {
   "Concurrent Limit",
-  "Test",  // Short dummy name
+  "Active Relays",  
   "Exit Menu"
 };
 
@@ -97,6 +97,9 @@ void setup() {
   
   // Initialize the ringer manager with phone instances (using nullptr for config for now)
   ringerManager.initialize(RELAY_PINS, NUM_PHONES, nullptr, !DEBUG_ENCODER_MODE);
+  
+  // Set initial active relay count
+  ringerManager.setActiveRelayCount(activeRelaySetting);
   
   // Set global pointer for concurrent phone limit checking
   globalRingerManager = &ringerManager;
@@ -164,9 +167,20 @@ void loop() {
   // Handle encoder events
   handleEncoderEvents();
   
-  // Only step the ringer manager if not paused
-  if (!systemPaused) {
+  // Only step the ringer manager if not paused AND we have active relays
+  if (!systemPaused && activeRelaySetting > 0) {
     ringerManager.step(currentTime);
+  }
+  
+  // If active relay count changed, update RingerManager
+  static int lastActiveRelayCount = activeRelaySetting;
+  if (lastActiveRelayCount != activeRelaySetting) {
+    ringerManager.setActiveRelayCount(activeRelaySetting);
+    lastActiveRelayCount = activeRelaySetting;
+    if (!DEBUG_ENCODER_MODE) {
+      Serial.print(F("Active relays changed to: "));
+      Serial.println(activeRelaySetting);
+    }
   }
   
   // Update display (only when not in menu mode)
@@ -271,10 +285,15 @@ void updateStatusLED() {
   }
 }
 
-// Check if a new call can start (respects concurrent phone limit)
+// Check if a new call can start (respects concurrent phone limit AND active relay count)
 bool canStartNewCall() {
   if (globalRingerManager == nullptr) {
     return false;  // Safety check
+  }
+  
+  // No calls allowed if active relays is 0
+  if (activeRelaySetting == 0) {
+    return false;
   }
   
   int currentActivePhones = globalRingerManager->getActiveCallCount();
@@ -335,14 +354,14 @@ void handleEncoderEvents() {
                                          "Turn: Adjust (1-8)", "Press: Save & Back");
               break;
               
-            case MENU_TEST:
-              Serial.println(F("*** SELECTED: Test ***"));
+            case MENU_ACTIVE_RELAYS:
+              Serial.println(F("*** SELECTED: Active Relays ***"));
               Serial.print(F("Current value: "));
-              Serial.println(testSetting);
+              Serial.println(activeRelaySetting);
               inAdjustmentMode = true;  // Enter adjustment mode
-              displayManager.showMessage("Test", 
-                                         String("Setting: ") + String(testSetting),
-                                         "Turn: Adjust (0-9)", "Press: Save & Back");
+              displayManager.showMessage("Active Relays", 
+                                         String("Setting: ") + String(activeRelaySetting),
+                                         "Turn: Adjust (0-8)", "Press: Save & Back");
               break;
               
             case MENU_EXIT:
@@ -369,14 +388,14 @@ void handleEncoderEvents() {
             displayManager.showMessage("Concurrent Limit", 
                                        String("Setting: ") + String(maxConcurrentSetting),
                                        "Turn: Adjust (1-8)", "Press: Save & Back");
-          } else if (inAdjustmentMode && currentMenuItem == MENU_TEST && testSetting < 9) {
-            // If we're adjusting test setting, increment the value
-            testSetting++;
-            Serial.print(F("MENU: Test setting increased to "));
-            Serial.println(testSetting);
-            displayManager.showMessage("Test", 
-                                       String("Setting: ") + String(testSetting),
-                                       "Turn: Adjust (0-9)", "Press: Save & Back");
+          } else if (inAdjustmentMode && currentMenuItem == MENU_ACTIVE_RELAYS && activeRelaySetting < 8) {
+            // If we're adjusting active relay count, increment the value
+            activeRelaySetting++;
+            Serial.print(F("MENU: Active relays increased to "));
+            Serial.println(activeRelaySetting);
+            displayManager.showMessage("Active Relays", 
+                                       String("Setting: ") + String(activeRelaySetting),
+                                       "Turn: Adjust (0-8)", "Press: Save & Back");
           } else if (!inAdjustmentMode) {
             // Navigate to next menu item
             currentMenuItem = (currentMenuItem + 1) % MENU_ITEM_COUNT;
@@ -396,14 +415,14 @@ void handleEncoderEvents() {
             displayManager.showMessage("Concurrent Limit", 
                                        String("Setting: ") + String(maxConcurrentSetting),
                                        "Turn: Adjust (1-8)", "Press: Save & Back");
-          } else if (inAdjustmentMode && currentMenuItem == MENU_TEST && testSetting > 0) {
-            // If we're adjusting test setting, decrement the value
-            testSetting--;
-            Serial.print(F("MENU: Test setting decreased to "));
-            Serial.println(testSetting);
-            displayManager.showMessage("Test", 
-                                       String("Setting: ") + String(testSetting),
-                                       "Turn: Adjust (0-9)", "Press: Save & Back");
+          } else if (inAdjustmentMode && currentMenuItem == MENU_ACTIVE_RELAYS && activeRelaySetting > 0) {
+            // If we're adjusting active relay count, decrement the value
+            activeRelaySetting--;
+            Serial.print(F("MENU: Active relays decreased to "));
+            Serial.println(activeRelaySetting);
+            displayManager.showMessage("Active Relays", 
+                                       String("Setting: ") + String(activeRelaySetting),
+                                       "Turn: Adjust (0-8)", "Press: Save & Back");
           } else if (!inAdjustmentMode) {
             // Navigate to previous menu item
             currentMenuItem = (currentMenuItem - 1 + MENU_ITEM_COUNT) % MENU_ITEM_COUNT;
