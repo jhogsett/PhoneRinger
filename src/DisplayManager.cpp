@@ -10,46 +10,58 @@ const int LCD_ROWS = 4;
 const unsigned long NORMAL_UPDATE_INTERVAL = 500;  // 500ms when paused
 const unsigned long FAST_UPDATE_INTERVAL = 100;    // 100ms when active
 
-// 🌪️ Custom character definitions for 3-frame storm animation (5x8 pixels)
+// 🌪️ Custom character definitions for 4-frame storm animation (5x8 pixels)
 // Each byte represents a row, each bit a pixel (1=on, 0=off)
-// Frame 0: Storm swirl starting position
+// Frame 0: Swirl Start
 const uint8_t stormFrame0[8] = {
-  0b00000,  // -----
-  0b00100,  // --X--
-  0b01110,  // -XXX-
-  0b11011,  // XX-XX
-  0b10001,  // X---X
-  0b01110,  // -XXX-
-  0b00100,  // --X--
-  0b00000   // -----
+  0b00000,
+  0b00100,
+  0b01110,
+  0b11111,
+  0b10101,
+  0b01110,
+  0b00100,
+  0b00000
 };
 
-// Frame 1: Storm swirl middle position
+// Frame 1: Swirl Tilt Right
 const uint8_t stormFrame1[8] = {
-  0b00000,  // -----
-  0b00010,  // ---X-
-  0b01100,  // -XX--
-  0b11010,  // XX-X-
-  0b01011,  // -X-XX
-  0b00110,  // --XX-
-  0b01000,  // -X---
-  0b00000   // -----
+  0b00000,
+  0b00010,
+  0b00111,
+  0b01101,
+  0b11011,
+  0b00110,
+  0b01000,
+  0b00000
 };
 
-// Frame 2: Storm swirl end position
+// Frame 2: Swirl Tilt Left
 const uint8_t stormFrame2[8] = {
-  0b00000,  // -----
-  0b01000,  // -X---
-  0b00110,  // --XX-
-  0b01011,  // -X-XX
-  0b11010,  // XX-X-
-  0b01100,  // -XX--
-  0b00010,  // ---X-
-  0b00000   // -----
+  0b00000,
+  0b01000,
+  0b01100,
+  0b11011,
+  0b01101,
+  0b00111,
+  0b00010,
+  0b00000
+};
+
+// Frame 3: Swirl Trail
+const uint8_t stormFrame3[8] = {
+  0b00000,
+  0b10000,
+  0b01000,
+  0b11100,
+  0b10110,
+  0b00100,
+  0b00001,
+  0b00000
 };
 
 // Array of pointers to the frame data for easy access
-const uint8_t* stormFrames[3] = {stormFrame0, stormFrame1, stormFrame2};
+const uint8_t* stormFrames[4] = {stormFrame0, stormFrame1, stormFrame2, stormFrame3};
 
 DisplayManager::DisplayManager() {
     lastUpdate = 0;
@@ -207,8 +219,8 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
     unsigned long seconds = millis() / 1000;
     unsigned long minutes = seconds / 60;
     seconds = seconds % 60;
-    // Format: "CallStorm" + storm icon (char 0) + spaces + timer
-    snprintf(globalStringBuffer, sizeof(globalStringBuffer), "CallStorm%c     %02lu:%02lu", '\x00', minutes % 100, seconds);
+    // Format: "CallStorm" + storm icon (char 1) + spaces + timer
+    snprintf(globalStringBuffer, sizeof(globalStringBuffer), "CallStorm \x01 2K %02lu:%02lu", minutes % 100, seconds);
     // Ensure exactly 20 characters by padding with spaces
     int len1 = strlen(globalStringBuffer);
     for (int i = len1; i < 20; i++) {
@@ -383,8 +395,8 @@ void DisplayManager::showSaveExitMessage() {
 void DisplayManager::initializeStormAnimation() {
     if (!lcdAvailable) return;
     
-    // Load the first frame as custom character 0
-    lcd.createChar(0, stormFrames[0]);
+    // Load the first frame as custom character 1 (avoid \x00 null terminator issues)
+    lcd.createChar(1, stormFrames[0]);
     
     // Initialize animation state
     currentAnimationFrame = 0;
@@ -401,8 +413,8 @@ void DisplayManager::updateStormAnimation() {
         // Move to next frame
         currentAnimationFrame = (currentAnimationFrame + 1) % ANIMATION_FRAME_COUNT;
         
-        // Load the new frame into custom character slot 0
-        lcd.createChar(0, stormFrames[currentAnimationFrame]);
+        // Load the new frame into custom character slot 1
+        lcd.createChar(1, stormFrames[currentAnimationFrame]);
         
         lastAnimationUpdate = currentTime;
         displayNeedsUpdate = true; // Trigger display refresh
