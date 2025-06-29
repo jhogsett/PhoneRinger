@@ -157,9 +157,14 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
     globalStringBuffer[20] = '\0';
     lcd.print(globalStringBuffer);
     
-    // Line 2: Active calls and ringing phones with enabled relay count (20 chars max)
-    // Format: "A:0 R:0 En:8 Max:4" or "A:0 R:0 En:8" if no limit
+    // Line 2: Available for important messages/alerts (future use)
     lcd.setCursor(0, 1);
+    snprintf(globalStringBuffer, sizeof(globalStringBuffer), "                    ");
+    lcd.print(globalStringBuffer);
+    
+    // Line 3: Active calls and ringing phones with enabled relay count (20 chars max)
+    // Format: "A:0 R:0 En:8 Max:4" or "A:0 R:0 En:8" if no limit
+    lcd.setCursor(0, 2);
     if (maxConcurrent > 0 && maxConcurrent < ringerManager->getTotalPhoneCount()) {
         snprintf(globalStringBuffer, sizeof(globalStringBuffer), "A:%d R:%d En:%d Max:%d", 
                 ringerManager->getActiveCallCount(),
@@ -180,44 +185,7 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
     globalStringBuffer[20] = '\0';
     lcd.print(globalStringBuffer);
     
-    // Line 3: Spaced and centered phone status (15 chars: "  R A - - X X X X  ")
-    lcd.setCursor(0, 2);
-    // Create spaced phone status: each phone gets a char + space, then center it
-    char phoneChars[8];
-    for (int i = 0; i < 8; i++) {
-        if (i < ringerManager->getActivePhoneCount()) {
-            if (ringerManager->isPhoneRinging(i)) {
-                phoneChars[i] = 'R';  // Ringing
-            } else if (ringerManager->isPhoneActive(i)) {
-                phoneChars[i] = 'A';  // Active
-            } else {
-                phoneChars[i] = '-';  // Idle
-            }
-        } else {
-            phoneChars[i] = 'X';  // Disabled
-        }
-    }
-    
-    // Build spaced string: "R A - - X X X X" (15 chars)
-    globalStringBuffer[0] = phoneChars[0];
-    for (int i = 1; i < 8; i++) {
-        globalStringBuffer[i * 2 - 1] = ' ';      // Space
-        globalStringBuffer[i * 2] = phoneChars[i]; // Phone char
-    }
-    // Total spaced string is 15 chars, center it in 20 chars (2 spaces on each side)
-    // Move the 15 chars to positions 2-16, then pad
-    for (int i = 14; i >= 0; i--) {
-        globalStringBuffer[i + 2] = globalStringBuffer[i];
-    }
-    globalStringBuffer[0] = ' ';
-    globalStringBuffer[1] = ' ';
-    globalStringBuffer[17] = ' ';
-    globalStringBuffer[18] = ' ';
-    globalStringBuffer[19] = ' ';
-    globalStringBuffer[20] = '\0';
-    lcd.print(globalStringBuffer);
-    
-    // Line 4: Status message (20 chars max)
+    // Line 4: Spaced and centered phone status (15 chars: "  R A - - X X X X  ")
     lcd.setCursor(0, 3);
     if (paused) {
         snprintf(globalStringBuffer, sizeof(globalStringBuffer), "** PAUSED **");
@@ -233,8 +201,39 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
         }
         globalStringBuffer[20] = '\0';
     } else {
-        // Line 4: Clean status line (pause handled by physical labeling)
-        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "                    ");
+        // Create spaced phone status: each phone gets a char + space, then center it
+        char phoneChars[8];
+        for (int i = 0; i < 8; i++) {
+            if (i < ringerManager->getActivePhoneCount()) {
+                if (ringerManager->isPhoneRinging(i)) {
+                    phoneChars[i] = 'R';  // Ringing
+                } else if (ringerManager->isPhoneActive(i)) {
+                    phoneChars[i] = 'A';  // Active
+                } else {
+                    phoneChars[i] = '-';  // Idle
+                }
+            } else {
+                phoneChars[i] = 'X';  // Disabled
+            }
+        }
+        
+        // Build spaced string: "R A - - X X X X" (15 chars)
+        globalStringBuffer[0] = phoneChars[0];
+        for (int i = 1; i < 8; i++) {
+            globalStringBuffer[i * 2 - 1] = ' ';      // Space
+            globalStringBuffer[i * 2] = phoneChars[i]; // Phone char
+        }
+        // Total spaced string is 15 chars, center it in 20 chars (2 spaces on each side)
+        // Move the 15 chars to positions 2-16, then pad
+        for (int i = 14; i >= 0; i--) {
+            globalStringBuffer[i + 2] = globalStringBuffer[i];
+        }
+        globalStringBuffer[0] = ' ';
+        globalStringBuffer[1] = ' ';
+        globalStringBuffer[17] = ' ';
+        globalStringBuffer[18] = ' ';
+        globalStringBuffer[19] = ' ';
+        globalStringBuffer[20] = '\0';
     }
     lcd.print(globalStringBuffer);
 }
