@@ -6,6 +6,9 @@
 // Forward declaration
 struct SystemConfig;
 
+// External reference to global call frequency setting
+extern int maxCallDelaySetting;
+
 // Callback function type for checking if a new call can start
 typedef bool (*CanStartCallCallback)();
 

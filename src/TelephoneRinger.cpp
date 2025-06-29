@@ -239,7 +239,17 @@ void TelephoneRinger::setRelayState(bool active) {
 }
 
 unsigned long TelephoneRinger::getRandomWaitTime() {
-    return random(5000, 30001); // 5-30 seconds
+    // Use global maxCallDelaySetting from main.cpp
+    // Convert seconds to milliseconds and create random range from 5s to maxCallDelaySetting
+    unsigned long minDelay = 5000;  // 5 seconds minimum
+    unsigned long maxDelay = (unsigned long)maxCallDelaySetting * 1000;  // Convert to milliseconds
+    
+    // Ensure minimum is not greater than maximum
+    if (minDelay >= maxDelay) {
+        minDelay = maxDelay / 2;  // Set minimum to half of maximum if needed
+    }
+    
+    return random(minDelay, maxDelay + 1);
 }
 
 void TelephoneRinger::debugPrint(const String& message) {
