@@ -193,10 +193,18 @@ void TelephoneRinger::startCall(int ringCount, bool cutShort, bool useUKStyleRin
     state = RING_ON;
     lastStateChange = millis(); // Reset timer for the RING_ON state
     
-    // Debug output
-    debugPrint("Phone on pin " + String(relayPin) + " starting call: " + 
-               String(totalRingsToMake) + " rings" + 
-               (finalRingCutShort ? " (final ring cut short)" : ""));
+    // Debug output using safe char buffer instead of String concatenation
+    if (enableSerialOutput) {
+        Serial.print(F("Phone on pin "));
+        Serial.print(relayPin);
+        Serial.print(F(" starting call: "));
+        Serial.print(totalRingsToMake);
+        Serial.print(F(" rings"));
+        if (finalRingCutShort) {
+            Serial.print(F(" (final ring cut short)"));
+        }
+        Serial.println();
+    }
 }
 
 void TelephoneRinger::stopCall() {

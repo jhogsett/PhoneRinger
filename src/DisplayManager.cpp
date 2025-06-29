@@ -1,5 +1,6 @@
 #include "DisplayManager.h"
 #include "RingerManager.h"
+#include "StringUtils.h"
 
 // LCD geometry
 const int LCD_COLS = 20;
@@ -115,29 +116,27 @@ void DisplayManager::showMessage(const String& line1, const String& line2,
                                 const String& line3, const String& line4) {
     if (!lcdAvailable) return; // Skip if LCD not available
     
-    static char lineBuffer[21];  // Static buffer for padding
-    
     lcd.clear();
     
     if (line1.length() > 0) {
         lcd.setCursor(0, 0);
-        padStringToBuffer(lineBuffer, line1.c_str(), 20);
-        lcd.print(lineBuffer);
+        padStringToGlobalBuffer(line1.c_str());
+        lcd.print(globalStringBuffer);
     }
     if (line2.length() > 0) {
         lcd.setCursor(0, 1);
-        padStringToBuffer(lineBuffer, line2.c_str(), 20);
-        lcd.print(lineBuffer);
+        padStringToGlobalBuffer(line2.c_str());
+        lcd.print(globalStringBuffer);
     }
     if (line3.length() > 0) {
         lcd.setCursor(0, 2);
-        padStringToBuffer(lineBuffer, line3.c_str(), 20);
-        lcd.print(lineBuffer);
+        padStringToGlobalBuffer(line3.c_str());
+        lcd.print(globalStringBuffer);
     }
     if (line4.length() > 0) {
         lcd.setCursor(0, 3);
-        padStringToBuffer(lineBuffer, line4.c_str(), 20);
-        lcd.print(lineBuffer);
+        padStringToGlobalBuffer(line4.c_str());
+        lcd.print(globalStringBuffer);
     }
 }
 
@@ -145,120 +144,112 @@ void DisplayManager::showMessage(const char* line1, const char* line2,
                                 const char* line3, const char* line4) {
     if (!lcdAvailable) return; // Skip if LCD not available
     
-    static char lineBuffer[21];  // Static buffer for padding
-    
     lcd.clear();
     
     if (line1 && strlen(line1) > 0) {
         lcd.setCursor(0, 0);
-        padStringToBuffer(lineBuffer, line1, 20);
-        lcd.print(lineBuffer);
+        padStringToGlobalBuffer(line1);
+        lcd.print(globalStringBuffer);
     }
     if (line2 && strlen(line2) > 0) {
         lcd.setCursor(0, 1);
-        padStringToBuffer(lineBuffer, line2, 20);
-        lcd.print(lineBuffer);
+        padStringToGlobalBuffer(line2);
+        lcd.print(globalStringBuffer);
     }
     if (line3 && strlen(line3) > 0) {
         lcd.setCursor(0, 2);
-        padStringToBuffer(lineBuffer, line3, 20);
-        lcd.print(lineBuffer);
+        padStringToGlobalBuffer(line3);
+        lcd.print(globalStringBuffer);
     }
     if (line4 && strlen(line4) > 0) {
         lcd.setCursor(0, 3);
-        padStringToBuffer(lineBuffer, line4, 20);
-        lcd.print(lineBuffer);
+        padStringToGlobalBuffer(line4);
+        lcd.print(globalStringBuffer);
     }
 }
 
 void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused, int maxConcurrent) {
     if (!lcdAvailable) return; // Skip if LCD not available
     
-    // Static buffers to avoid String allocation
-    static char line1Buffer[21];
-    static char line2Buffer[21]; 
-    static char line3Buffer[21];
-    static char line4Buffer[21];
-    
     // Line 1: Title and system time (20 chars max: "CallCenter  00:00")
     lcd.setCursor(0, 0);
     unsigned long seconds = millis() / 1000;
     unsigned long minutes = seconds / 60;
     seconds = seconds % 60;
-    snprintf(line1Buffer, sizeof(line1Buffer), "CallCenter  %02lu:%02lu", minutes % 100, seconds);
+    snprintf(globalStringBuffer, sizeof(globalStringBuffer), "CallCenter  %02lu:%02lu", minutes % 100, seconds);
     // Ensure exactly 20 characters by padding with spaces
-    int len1 = strlen(line1Buffer);
+    int len1 = strlen(globalStringBuffer);
     for (int i = len1; i < 20; i++) {
-        line1Buffer[i] = ' ';
+        globalStringBuffer[i] = ' ';
     }
-    line1Buffer[20] = '\0';
-    lcd.print(line1Buffer);
+    globalStringBuffer[20] = '\0';
+    lcd.print(globalStringBuffer);
     
     // Line 2: Active calls and ringing phones with enabled relay count (20 chars max)
     // Format: "A:0 R:0 En:8 Max:4" or "A:0 R:0 En:8" if no limit
     lcd.setCursor(0, 1);
     if (maxConcurrent > 0 && maxConcurrent < ringerManager->getTotalPhoneCount()) {
-        snprintf(line2Buffer, sizeof(line2Buffer), "A:%d R:%d En:%d Max:%d", 
+        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "A:%d R:%d En:%d Max:%d", 
                 ringerManager->getActiveCallCount(),
                 ringerManager->getRingingPhoneCount(),
                 ringerManager->getActivePhoneCount(),
                 maxConcurrent);
     } else {
-        snprintf(line2Buffer, sizeof(line2Buffer), "A:%d R:%d En:%d", 
+        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "A:%d R:%d En:%d", 
                 ringerManager->getActiveCallCount(),
                 ringerManager->getRingingPhoneCount(),
                 ringerManager->getActivePhoneCount());
     }
     // Pad to 20 characters
-    int len = strlen(line2Buffer);
+    int len = strlen(globalStringBuffer);
     for (int i = len; i < 20; i++) {
-        line2Buffer[i] = ' ';
+        globalStringBuffer[i] = ' ';
     }
-    line2Buffer[20] = '\0';
-    lcd.print(line2Buffer);
+    globalStringBuffer[20] = '\0';
+    lcd.print(globalStringBuffer);
     
-    // Line 3: Visual phone status (20 chars max for 8 phones)
+    // Line 3: Visual phone status (8 chars + 12 reserved for future use)
     lcd.setCursor(0, 2);
     // Create phone status without String allocation
-    for (int i = 0; i < 8 && i < 20; i++) {
+    for (int i = 0; i < 8; i++) {
         if (i < ringerManager->getActivePhoneCount()) {
             if (ringerManager->isPhoneRinging(i)) {
-                line3Buffer[i] = 'R';  // Ringing
+                globalStringBuffer[i] = 'R';  // Ringing
             } else if (ringerManager->isPhoneActive(i)) {
-                line3Buffer[i] = 'A';  // Active
+                globalStringBuffer[i] = 'A';  // Active
             } else {
-                line3Buffer[i] = '-';  // Idle
+                globalStringBuffer[i] = '-';  // Idle
             }
         } else {
-            line3Buffer[i] = 'X';  // Disabled
+            globalStringBuffer[i] = 'X';  // Disabled
         }
     }
-    // Pad remaining characters
+    // Pad remaining 12 characters with spaces (reserved for future important info)
     for (int i = 8; i < 20; i++) {
-        line3Buffer[i] = ' ';
+        globalStringBuffer[i] = ' ';
     }
-    line3Buffer[20] = '\0';
-    lcd.print(line3Buffer);
+    globalStringBuffer[20] = '\0';
+    lcd.print(globalStringBuffer);
     
     // Line 4: Status message (20 chars max)
     lcd.setCursor(0, 3);
     if (paused) {
-        snprintf(line4Buffer, sizeof(line4Buffer), "** PAUSED **");
+        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "** PAUSED **");
         // Center the text
-        int textLen = strlen(line4Buffer);
+        int textLen = strlen(globalStringBuffer);
         int spaces = (20 - textLen) / 2;
         for (int i = 19; i >= 0; i--) {
             if (i >= spaces && i < spaces + textLen) {
-                line4Buffer[i] = line4Buffer[i - spaces];
+                globalStringBuffer[i] = globalStringBuffer[i - spaces];
             } else {
-                line4Buffer[i] = ' ';
+                globalStringBuffer[i] = ' ';
             }
         }
-        line4Buffer[20] = '\0';
+        globalStringBuffer[20] = '\0';
     } else {
-        snprintf(line4Buffer, sizeof(line4Buffer), "Run - A0=Pause      ");
+        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "Run - A0=Pause      ");
     }
-    lcd.print(line4Buffer);
+    lcd.print(globalStringBuffer);
 }
 
 void DisplayManager::showStartupMessage() {
@@ -335,20 +326,4 @@ void DisplayManager::centerText(String text, int line, int width) {
     int padding = (width - text.length()) / 2;
     lcd.setCursor(padding, line);
     lcd.print(text);
-}
-
-void DisplayManager::padStringToBuffer(char* buffer, const char* str, int length) {
-    int strLen = strlen(str);
-    
-    // Copy the string, truncating if too long
-    int copyLen = min(strLen, length);
-    strncpy(buffer, str, copyLen);
-    
-    // Pad with spaces if needed
-    for (int i = copyLen; i < length; i++) {
-        buffer[i] = ' ';
-    }
-    
-    // Null terminate
-    buffer[length] = '\0';
 }
