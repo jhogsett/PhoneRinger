@@ -208,7 +208,7 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
     unsigned long minutes = seconds / 60;
     seconds = seconds % 60;
     // Format: "CallStorm" + storm icon (char 0) + spaces + timer
-    snprintf(globalStringBuffer, sizeof(globalStringBuffer), "CallStorm\x00     %02lu:%02lu", minutes % 100, seconds);
+    snprintf(globalStringBuffer, sizeof(globalStringBuffer), "CallStorm%c     %02lu:%02lu", '\x00', minutes % 100, seconds);
     // Ensure exactly 20 characters by padding with spaces
     int len1 = strlen(globalStringBuffer);
     for (int i = len1; i < 20; i++) {
