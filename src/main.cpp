@@ -22,6 +22,7 @@ bool inAdjustmentMode = false;  // Track if we're adjusting a setting
 int currentMenuItem = 0;
 int maxConcurrentSetting = MAX_CONCURRENT_ACTIVE_PHONES;  // Local copy for menu editing
 int activeRelaySetting = NUM_PHONES;  // Number of active relays (0-8)
+int maxCallDelaySetting = 30;  // Maximum delay between calls in seconds (10-1000, increments of 10)
 
 // Static buffers for menu display - avoid String concatenation
 char menuBuffer1[21];  // LCD line buffer (20 chars + null terminator)
@@ -33,6 +34,7 @@ char menuBuffer4[21];  // LCD line buffer
 enum MenuItems {
   MENU_CONCURRENT_LIMIT = 0,
   MENU_ACTIVE_RELAYS,  // Number of active relays (0-8)
+  MENU_CALL_FREQUENCY, // Maximum delay between calls (10-1000 seconds)
   MENU_EXIT,
   MENU_ITEM_COUNT
 };
@@ -40,6 +42,7 @@ enum MenuItems {
 const char* menuItemNames[] = {
   "Concurrent Limit",
   "Active Relays",  
+  "Call Frequency",
   "Exit Menu"
 };
 
@@ -372,6 +375,18 @@ void handleEncoderEvents() {
                                          "Turn: Adjust (0-8)", "Press: Save & Back");
               break;
               
+            case MENU_CALL_FREQUENCY:
+              Serial.println(F("*** SELECTED: Call Frequency ***"));
+              Serial.print(F("Current value: "));
+              Serial.print(maxCallDelaySetting);
+              Serial.println(F(" seconds"));
+              inAdjustmentMode = true;  // Enter adjustment mode
+              snprintf(menuBuffer2, sizeof(menuBuffer2), "Max: %ds", maxCallDelaySetting);
+              displayManager.showMessage("Call Frequency", 
+                                         menuBuffer2,
+                                         "Turn: +/-10s (10-1000)", "Press: Save & Back");
+              break;
+              
             case MENU_EXIT:
               inMenu = false;
               inAdjustmentMode = false;
@@ -406,6 +421,16 @@ void handleEncoderEvents() {
             displayManager.showMessage("Active Relays", 
                                        menuBuffer2,
                                        "Turn: Adjust (0-8)", "Press: Save & Back");
+          } else if (inAdjustmentMode && currentMenuItem == MENU_CALL_FREQUENCY && maxCallDelaySetting < 1000) {
+            // If we're adjusting call frequency, increment the value
+            maxCallDelaySetting += 10;
+            Serial.print(F("MENU: Call frequency increased to "));
+            Serial.print(maxCallDelaySetting);
+            Serial.println(F(" seconds"));
+            snprintf(menuBuffer2, sizeof(menuBuffer2), "Max: %ds", maxCallDelaySetting);
+            displayManager.showMessage("Call Frequency", 
+                                       menuBuffer2,
+                                       "Turn: +/-10s (10-1000)", "Press: Save & Back");
           } else if (!inAdjustmentMode) {
             // Navigate to next menu item
             currentMenuItem = (currentMenuItem + 1) % MENU_ITEM_COUNT;
@@ -435,6 +460,16 @@ void handleEncoderEvents() {
             displayManager.showMessage("Active Relays", 
                                        menuBuffer2,
                                        "Turn: Adjust (0-8)", "Press: Save & Back");
+          } else if (inAdjustmentMode && currentMenuItem == MENU_CALL_FREQUENCY && maxCallDelaySetting > 10) {
+            // If we're adjusting call frequency, decrement the value
+            maxCallDelaySetting -= 10;
+            Serial.print(F("MENU: Call frequency decreased to "));
+            Serial.print(maxCallDelaySetting);
+            Serial.println(F(" seconds"));
+            snprintf(menuBuffer2, sizeof(menuBuffer2), "Max: %ds", maxCallDelaySetting);
+            displayManager.showMessage("Call Frequency", 
+                                       menuBuffer2,
+                                       "Turn: +/-10s (10-1000)", "Press: Save & Back");
           } else if (!inAdjustmentMode) {
             // Navigate to previous menu item
             currentMenuItem = (currentMenuItem - 1 + MENU_ITEM_COUNT) % MENU_ITEM_COUNT;
