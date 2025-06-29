@@ -21,16 +21,19 @@ bool inMenu = false;
 bool inAdjustmentMode = false;  // Track if we're adjusting a setting
 int currentMenuItem = 0;
 int maxConcurrentSetting = MAX_CONCURRENT_ACTIVE_PHONES;  // Local copy for menu editing
+int testSetting = 5;  // Dummy test variable (0-9)
 
 // Menu Items
 enum MenuItems {
   MENU_CONCURRENT_LIMIT = 0,
+  MENU_TEST,  // Dummy test option
   MENU_EXIT,
   MENU_ITEM_COUNT
 };
 
 const char* menuItemNames[] = {
   "Concurrent Limit",
+  "Test",  // Short dummy name
   "Exit Menu"
 };
 
@@ -332,6 +335,16 @@ void handleEncoderEvents() {
                                          "Turn: Adjust (1-8)", "Press: Save & Back");
               break;
               
+            case MENU_TEST:
+              Serial.println(F("*** SELECTED: Test ***"));
+              Serial.print(F("Current value: "));
+              Serial.println(testSetting);
+              inAdjustmentMode = true;  // Enter adjustment mode
+              displayManager.showMessage("Test", 
+                                         String("Setting: ") + String(testSetting),
+                                         "Turn: Adjust (0-9)", "Press: Save & Back");
+              break;
+              
             case MENU_EXIT:
               inMenu = false;
               inAdjustmentMode = false;
@@ -356,6 +369,14 @@ void handleEncoderEvents() {
             displayManager.showMessage("Concurrent Limit", 
                                        String("Setting: ") + String(maxConcurrentSetting),
                                        "Turn: Adjust (1-8)", "Press: Save & Back");
+          } else if (inAdjustmentMode && currentMenuItem == MENU_TEST && testSetting < 9) {
+            // If we're adjusting test setting, increment the value
+            testSetting++;
+            Serial.print(F("MENU: Test setting increased to "));
+            Serial.println(testSetting);
+            displayManager.showMessage("Test", 
+                                       String("Setting: ") + String(testSetting),
+                                       "Turn: Adjust (0-9)", "Press: Save & Back");
           } else if (!inAdjustmentMode) {
             // Navigate to next menu item
             currentMenuItem = (currentMenuItem + 1) % MENU_ITEM_COUNT;
@@ -375,6 +396,14 @@ void handleEncoderEvents() {
             displayManager.showMessage("Concurrent Limit", 
                                        String("Setting: ") + String(maxConcurrentSetting),
                                        "Turn: Adjust (1-8)", "Press: Save & Back");
+          } else if (inAdjustmentMode && currentMenuItem == MENU_TEST && testSetting > 0) {
+            // If we're adjusting test setting, decrement the value
+            testSetting--;
+            Serial.print(F("MENU: Test setting decreased to "));
+            Serial.println(testSetting);
+            displayManager.showMessage("Test", 
+                                       String("Setting: ") + String(testSetting),
+                                       "Turn: Adjust (0-9)", "Press: Save & Back");
           } else if (!inAdjustmentMode) {
             // Navigate to previous menu item
             currentMenuItem = (currentMenuItem - 1 + MENU_ITEM_COUNT) % MENU_ITEM_COUNT;
