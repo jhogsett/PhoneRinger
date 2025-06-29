@@ -54,7 +54,7 @@ private:
     unsigned long lastAnimationUpdate;
     uint8_t currentAnimationFrame;
     static const unsigned long ANIMATION_FRAME_DURATION = 250;  // 4 FPS (250ms per frame)
-    static const uint8_t ANIMATION_FRAME_COUNT = 4;  // 4 frames for retro charm
+    static const uint8_t ANIMATION_FRAME_COUNT = 3;  // 3 frames for retro charm
 
     // Helper methods
     // Note: Legacy String-based methods removed for heap safety
