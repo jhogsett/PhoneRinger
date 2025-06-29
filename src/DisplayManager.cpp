@@ -115,23 +115,29 @@ void DisplayManager::showMessage(const String& line1, const String& line2,
                                 const String& line3, const String& line4) {
     if (!lcdAvailable) return; // Skip if LCD not available
     
+    static char lineBuffer[21];  // Static buffer for padding
+    
     lcd.clear();
     
     if (line1.length() > 0) {
         lcd.setCursor(0, 0);
-        lcd.print(padString(line1, 20));
+        padStringToBuffer(lineBuffer, line1.c_str(), 20);
+        lcd.print(lineBuffer);
     }
     if (line2.length() > 0) {
         lcd.setCursor(0, 1);
-        lcd.print(padString(line2, 20));
+        padStringToBuffer(lineBuffer, line2.c_str(), 20);
+        lcd.print(lineBuffer);
     }
     if (line3.length() > 0) {
         lcd.setCursor(0, 2);
-        lcd.print(padString(line3, 20));
+        padStringToBuffer(lineBuffer, line3.c_str(), 20);
+        lcd.print(lineBuffer);
     }
     if (line4.length() > 0) {
         lcd.setCursor(0, 3);
-        lcd.print(padString(line4, 20));
+        padStringToBuffer(lineBuffer, line4.c_str(), 20);
+        lcd.print(lineBuffer);
     }
 }
 
@@ -139,23 +145,29 @@ void DisplayManager::showMessage(const char* line1, const char* line2,
                                 const char* line3, const char* line4) {
     if (!lcdAvailable) return; // Skip if LCD not available
     
+    static char lineBuffer[21];  // Static buffer for padding
+    
     lcd.clear();
     
     if (line1 && strlen(line1) > 0) {
         lcd.setCursor(0, 0);
-        lcd.print(padString(String(line1), 20));  // Still use padString for now
+        padStringToBuffer(lineBuffer, line1, 20);
+        lcd.print(lineBuffer);
     }
     if (line2 && strlen(line2) > 0) {
         lcd.setCursor(0, 1);
-        lcd.print(padString(String(line2), 20));
+        padStringToBuffer(lineBuffer, line2, 20);
+        lcd.print(lineBuffer);
     }
     if (line3 && strlen(line3) > 0) {
         lcd.setCursor(0, 2);
-        lcd.print(padString(String(line3), 20));
+        padStringToBuffer(lineBuffer, line3, 20);
+        lcd.print(lineBuffer);
     }
     if (line4 && strlen(line4) > 0) {
         lcd.setCursor(0, 3);
-        lcd.print(padString(String(line4), 20));
+        padStringToBuffer(lineBuffer, line4, 20);
+        lcd.print(lineBuffer);
     }
 }
 
@@ -325,9 +337,18 @@ void DisplayManager::centerText(String text, int line, int width) {
     lcd.print(text);
 }
 
-String DisplayManager::padString(String str, int length) {
-    while (str.length() < length) {
-        str += " ";
+void DisplayManager::padStringToBuffer(char* buffer, const char* str, int length) {
+    int strLen = strlen(str);
+    
+    // Copy the string, truncating if too long
+    int copyLen = min(strLen, length);
+    strncpy(buffer, str, copyLen);
+    
+    // Pad with spaces if needed
+    for (int i = copyLen; i < length; i++) {
+        buffer[i] = ' ';
     }
-    return str.substring(0, length); // Truncate if too long
+    
+    // Null terminate
+    buffer[length] = '\0';
 }

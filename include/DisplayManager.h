@@ -49,7 +49,7 @@ private:
     String formatPhoneStatus(const RingerManager* ringerManager);
     String formatActiveCount(const RingerManager* ringerManager);
     void centerText(String text, int line, int width = 20);
-    String padString(String str, int length);
+    void padStringToBuffer(char* buffer, const char* str, int length);  // Safe C-string version
 };
 
 #endif
