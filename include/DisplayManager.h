@@ -34,6 +34,7 @@ public:
     void showChaosMessage(); // Maximum chaos easter egg display
     void showRelayAdjustmentMessage(int newCount); // Brief relay adjustment feedback
     void showRelayAdjustmentDirection(int newCount, bool increment); // Show +1/-1 style feedback
+    void showSaveExitMessage(); // Menu long-press save & exit confirmation
 
 private:
     hd44780_I2Cexp lcd; // declare lcd object: auto locate & auto config expander chip

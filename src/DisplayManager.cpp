@@ -314,3 +314,11 @@ void DisplayManager::showRelayAdjustmentDirection(int newCount, bool increment) 
     tempMessageStartTime = millis();
     displayNeedsUpdate = true; // Trigger immediate display update
 }
+
+void DisplayManager::showSaveExitMessage() {
+    // Show brief "Settings Saved!" message before returning to operation
+    snprintf(tempMessageText, sizeof(tempMessageText), "Settings Saved!");
+    showingTempMessage = true;
+    tempMessageStartTime = millis();
+    displayNeedsUpdate = true; // Trigger immediate display update
+}

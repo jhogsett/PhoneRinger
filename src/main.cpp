@@ -90,6 +90,7 @@ void loadSettingsFromEEPROM();
 void saveSettingsToEEPROM();
 void activateMaximumChaos(); // 🌪️ Maximum Chaos Easter Egg!
 void showRelayAdjustmentFeedback(); // Show brief relay adjustment confirmation
+void saveAndExitMenu(); // 💾 Menu Long-Press: Save & Exit
 
 void setup() {
   Serial.begin(115200);
@@ -508,12 +509,9 @@ void handleEncoderEvents() {
           break;
           
         case EncoderManager::BUTTON_LONG_PRESS:
-          Serial.println(F("Long press: Reset concurrent limit to default"));
-          maxConcurrentSetting = MAX_CONCURRENT_ACTIVE_PHONES;
-          snprintf(menuBuffer2, sizeof(menuBuffer2), "Reset to: %d", maxConcurrentSetting);
-          displayManager.showMessage("Max Concurrent", 
-                                     menuBuffer2,
-                                     "Turn: Adjust (1-8)", "Press: Save & Back");
+          // Menu Long-Press: Save & Exit from any menu state
+          Serial.println(F("Menu Long-Press: Save & Exit"));
+          saveAndExitMenu();
           break;
           
         default:
@@ -615,4 +613,27 @@ void activateMaximumChaos() {
 void showRelayAdjustmentFeedback() {
   // Display brief confirmation message
   displayManager.showRelayAdjustmentMessage(activeRelaySetting);
+}
+
+// 💾 MENU LONG-PRESS SAVE & EXIT - Quick save and return to operation
+void saveAndExitMenu() {
+  // Save all current settings to EEPROM
+  saveSettingsToEEPROM();
+  
+  // Show brief confirmation message
+  displayManager.showSaveExitMessage();
+  
+  // Exit menu mode and return to normal operation
+  inMenu = false;
+  inAdjustmentMode = false;
+  
+  Serial.println(F("*** MENU LONG-PRESS: SAVED & EXITED ***"));
+  Serial.print(F("Settings saved: Concurrent="));
+  Serial.print(maxConcurrentSetting);
+  Serial.print(F(", Active="));
+  Serial.print(activeRelaySetting);
+  Serial.print(F(", Frequency="));
+  Serial.println(maxCallDelaySetting);
+  
+  // The normal status display will resume automatically via the main loop
 }
