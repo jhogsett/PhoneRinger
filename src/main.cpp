@@ -41,9 +41,9 @@ enum MenuItems {
 };
 
 const char* menuItemNames[] = {
-  "Concurrent Limit",
-  "Active Relays",  
-  "Call Frequency",
+  "Max Concurrent",
+  "Active Phones",  
+  "Call Timing",
   "Exit Menu"
 };
 
@@ -86,7 +86,7 @@ void saveSettingsToEEPROM();
 void setup() {
   Serial.begin(115200);
   if (!DEBUG_ENCODER_MODE) {
-    Serial.println(F("Call Center Simulator Starting..."));
+    Serial.println(F("CallStorm Simulator Starting..."));
     Serial.println(F("Hardware: 8-Relay Module + 20x4 LCD + Rotary Encoder + Pause Button"));
   }
   
@@ -132,7 +132,7 @@ void setup() {
   loadSettingsFromEEPROM();
   
   if (!DEBUG_ENCODER_MODE) {
-    Serial.println(F("Call Center Simulator Ready!"));
+    Serial.println(F("CallStorm Simulator Ready!"));
     Serial.println(F("Hardware Configuration:"));
     Serial.println(F("- 8 phone lines on pins 5-12"));
     Serial.print(F("- Actual pin assignments: "));
@@ -372,35 +372,35 @@ void handleEncoderEvents() {
           // Not in adjustment mode - handle menu selection
           switch (currentMenuItem) {
             case MENU_CONCURRENT_LIMIT:
-              Serial.println(F("*** SELECTED: Concurrent Limit ***"));
+              Serial.println(F("*** SELECTED: Max Concurrent ***"));
               Serial.print(F("Current value: "));
               Serial.println(maxConcurrentSetting);
               inAdjustmentMode = true;  // Enter adjustment mode
               snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", maxConcurrentSetting);
-              displayManager.showMessage("Concurrent Limit", 
+              displayManager.showMessage("Max Concurrent", 
                                          menuBuffer2,
                                          "Turn: Adjust (1-8)", "Press: Save & Back");
               break;
               
             case MENU_ACTIVE_RELAYS:
-              Serial.println(F("*** SELECTED: Active Relays ***"));
+              Serial.println(F("*** SELECTED: Active Phones ***"));
               Serial.print(F("Current value: "));
               Serial.println(activeRelaySetting);
               inAdjustmentMode = true;  // Enter adjustment mode
               snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", activeRelaySetting);
-              displayManager.showMessage("Active Relays", 
+              displayManager.showMessage("Active Phones", 
                                          menuBuffer2,
                                          "Turn: Adjust (0-8)", "Press: Save & Back");
               break;
               
             case MENU_CALL_FREQUENCY:
-              Serial.println(F("*** SELECTED: Call Frequency ***"));
+              Serial.println(F("*** SELECTED: Call Timing ***"));
               Serial.print(F("Current value: "));
               Serial.print(maxCallDelaySetting);
               Serial.println(F(" seconds"));
               inAdjustmentMode = true;  // Enter adjustment mode
               snprintf(menuBuffer2, sizeof(menuBuffer2), "Max: %ds", maxCallDelaySetting);
-              displayManager.showMessage("Call Frequency", 
+              displayManager.showMessage("Call Timing", 
                                          menuBuffer2,
                                          "Turn: +/-10s (10-1000)", "Press: Save & Back");
               break;
@@ -427,7 +427,7 @@ void handleEncoderEvents() {
             Serial.print(F("MENU: Concurrent limit increased to "));
             Serial.println(maxConcurrentSetting);
             snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", maxConcurrentSetting);
-            displayManager.showMessage("Concurrent Limit", 
+            displayManager.showMessage("Max Concurrent", 
                                        menuBuffer2,
                                        "Turn: Adjust (1-8)", "Press: Save & Back");
           } else if (inAdjustmentMode && currentMenuItem == MENU_ACTIVE_RELAYS && activeRelaySetting < 8) {
@@ -436,7 +436,7 @@ void handleEncoderEvents() {
             Serial.print(F("MENU: Active relays increased to "));
             Serial.println(activeRelaySetting);
             snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", activeRelaySetting);
-            displayManager.showMessage("Active Relays", 
+            displayManager.showMessage("Active Phones", 
                                        menuBuffer2,
                                        "Turn: Adjust (0-8)", "Press: Save & Back");
           } else if (inAdjustmentMode && currentMenuItem == MENU_CALL_FREQUENCY && maxCallDelaySetting < 1000) {
@@ -446,7 +446,7 @@ void handleEncoderEvents() {
             Serial.print(maxCallDelaySetting);
             Serial.println(F(" seconds"));
             snprintf(menuBuffer2, sizeof(menuBuffer2), "Max: %ds", maxCallDelaySetting);
-            displayManager.showMessage("Call Frequency", 
+            displayManager.showMessage("Call Timing", 
                                        menuBuffer2,
                                        "Turn: +/-10s (10-1000)", "Press: Save & Back");
           } else if (!inAdjustmentMode) {
@@ -466,7 +466,7 @@ void handleEncoderEvents() {
             Serial.print(F("MENU: Concurrent limit decreased to "));
             Serial.println(maxConcurrentSetting);
             snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", maxConcurrentSetting);
-            displayManager.showMessage("Concurrent Limit", 
+            displayManager.showMessage("Max Concurrent", 
                                        menuBuffer2,
                                        "Turn: Adjust (1-8)", "Press: Save & Back");
           } else if (inAdjustmentMode && currentMenuItem == MENU_ACTIVE_RELAYS && activeRelaySetting > 0) {
@@ -475,7 +475,7 @@ void handleEncoderEvents() {
             Serial.print(F("MENU: Active relays decreased to "));
             Serial.println(activeRelaySetting);
             snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", activeRelaySetting);
-            displayManager.showMessage("Active Relays", 
+            displayManager.showMessage("Active Phones", 
                                        menuBuffer2,
                                        "Turn: Adjust (0-8)", "Press: Save & Back");
           } else if (inAdjustmentMode && currentMenuItem == MENU_CALL_FREQUENCY && maxCallDelaySetting > 10) {
@@ -485,7 +485,7 @@ void handleEncoderEvents() {
             Serial.print(maxCallDelaySetting);
             Serial.println(F(" seconds"));
             snprintf(menuBuffer2, sizeof(menuBuffer2), "Max: %ds", maxCallDelaySetting);
-            displayManager.showMessage("Call Frequency", 
+            displayManager.showMessage("Call Timing", 
                                        menuBuffer2,
                                        "Turn: +/-10s (10-1000)", "Press: Save & Back");
           } else if (!inAdjustmentMode) {
@@ -502,7 +502,7 @@ void handleEncoderEvents() {
           Serial.println(F("Long press: Reset concurrent limit to default"));
           maxConcurrentSetting = MAX_CONCURRENT_ACTIVE_PHONES;
           snprintf(menuBuffer2, sizeof(menuBuffer2), "Reset to: %d", maxConcurrentSetting);
-          displayManager.showMessage("Concurrent Limit", 
+          displayManager.showMessage("Max Concurrent", 
                                      menuBuffer2,
                                      "Turn: Adjust (1-8)", "Press: Save & Back");
           break;

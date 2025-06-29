@@ -143,12 +143,12 @@ void DisplayManager::showMessage(const char* line1, const char* line2,
 void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused, int maxConcurrent) {
     if (!lcdAvailable) return; // Skip if LCD not available
     
-    // Line 1: Title and system time (20 chars max: "CallCenter  00:00")
+    // Line 1: CallStorm branding with right-aligned timer (20 chars: "CallStorm      12:34")
     lcd.setCursor(0, 0);
     unsigned long seconds = millis() / 1000;
     unsigned long minutes = seconds / 60;
     seconds = seconds % 60;
-    snprintf(globalStringBuffer, sizeof(globalStringBuffer), "CallCenter  %02lu:%02lu", minutes % 100, seconds);
+    snprintf(globalStringBuffer, sizeof(globalStringBuffer), "CallStorm      %02lu:%02lu", minutes % 100, seconds);
     // Ensure exactly 20 characters by padding with spaces
     int len1 = strlen(globalStringBuffer);
     for (int i = len1; i < 20; i++) {
@@ -180,26 +180,40 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
     globalStringBuffer[20] = '\0';
     lcd.print(globalStringBuffer);
     
-    // Line 3: Visual phone status (8 chars + 12 reserved for future use)
+    // Line 3: Spaced and centered phone status (15 chars: "  R A - - X X X X  ")
     lcd.setCursor(0, 2);
-    // Create phone status without String allocation
+    // Create spaced phone status: each phone gets a char + space, then center it
+    char phoneChars[8];
     for (int i = 0; i < 8; i++) {
         if (i < ringerManager->getActivePhoneCount()) {
             if (ringerManager->isPhoneRinging(i)) {
-                globalStringBuffer[i] = 'R';  // Ringing
+                phoneChars[i] = 'R';  // Ringing
             } else if (ringerManager->isPhoneActive(i)) {
-                globalStringBuffer[i] = 'A';  // Active
+                phoneChars[i] = 'A';  // Active
             } else {
-                globalStringBuffer[i] = '-';  // Idle
+                phoneChars[i] = '-';  // Idle
             }
         } else {
-            globalStringBuffer[i] = 'X';  // Disabled
+            phoneChars[i] = 'X';  // Disabled
         }
     }
-    // Pad remaining 12 characters with spaces (reserved for future important info)
-    for (int i = 8; i < 20; i++) {
-        globalStringBuffer[i] = ' ';
+    
+    // Build spaced string: "R A - - X X X X" (15 chars)
+    globalStringBuffer[0] = phoneChars[0];
+    for (int i = 1; i < 8; i++) {
+        globalStringBuffer[i * 2 - 1] = ' ';      // Space
+        globalStringBuffer[i * 2] = phoneChars[i]; // Phone char
     }
+    // Total spaced string is 15 chars, center it in 20 chars (2 spaces on each side)
+    // Move the 15 chars to positions 2-16, then pad
+    for (int i = 14; i >= 0; i--) {
+        globalStringBuffer[i + 2] = globalStringBuffer[i];
+    }
+    globalStringBuffer[0] = ' ';
+    globalStringBuffer[1] = ' ';
+    globalStringBuffer[17] = ' ';
+    globalStringBuffer[18] = ' ';
+    globalStringBuffer[19] = ' ';
     globalStringBuffer[20] = '\0';
     lcd.print(globalStringBuffer);
     
@@ -219,27 +233,28 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
         }
         globalStringBuffer[20] = '\0';
     } else {
-        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "Run - A0=Pause      ");
+        // Line 4: Clean status line (pause handled by physical labeling)
+        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "                    ");
     }
     lcd.print(globalStringBuffer);
 }
 
 void DisplayManager::showStartupMessage() {
-    showMessage("Call Center Simulator",
+    showMessage("CallStorm Simulator",
                 "Version 2.0",
                 "8-Phone System",
                 "Initializing...");
 }
 
 void DisplayManager::showPauseMessage() {
-    showMessage("Call Center Sim",
+    showMessage("CallStorm System",
                 "** SYSTEM PAUSED **",
                 "All relays OFF",
                 "Press PinA0 to resume");
 }
 
 void DisplayManager::showResumeMessage() {
-    showMessage("Call Center Sim",
+    showMessage("CallStorm System",
                 "** SYSTEM RESUMED **",
                 "Calls restarting...",
                 "");
