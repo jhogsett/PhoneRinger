@@ -25,7 +25,7 @@ public:
     
     // Get current encoder state for debugging
     bool getButtonState() const;
-    String getEventString(EncoderEvent event) const;
+    const char* getEventString(EncoderEvent event) const;
     
 private:
     // Pin assignments

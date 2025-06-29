@@ -112,34 +112,6 @@ void DisplayManager::clear() {
     displayNeedsUpdate = true;
 }
 
-void DisplayManager::showMessage(const String& line1, const String& line2, 
-                                const String& line3, const String& line4) {
-    if (!lcdAvailable) return; // Skip if LCD not available
-    
-    lcd.clear();
-    
-    if (line1.length() > 0) {
-        lcd.setCursor(0, 0);
-        padStringToGlobalBuffer(line1.c_str(), 20);
-        lcd.print(globalStringBuffer);
-    }
-    if (line2.length() > 0) {
-        lcd.setCursor(0, 1);
-        padStringToGlobalBuffer(line2.c_str(), 20);
-        lcd.print(globalStringBuffer);
-    }
-    if (line3.length() > 0) {
-        lcd.setCursor(0, 2);
-        padStringToGlobalBuffer(line3.c_str(), 20);
-        lcd.print(globalStringBuffer);
-    }
-    if (line4.length() > 0) {
-        lcd.setCursor(0, 3);
-        padStringToGlobalBuffer(line4.c_str(), 20);
-        lcd.print(globalStringBuffer);
-    }
-}
-
 void DisplayManager::showMessage(const char* line1, const char* line2, 
                                 const char* line3, const char* line4) {
     if (!lcdAvailable) return; // Skip if LCD not available

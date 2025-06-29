@@ -22,8 +22,7 @@ public:
     // Display control
     void setBrightness(uint8_t brightness);
     void clear();
-    void showMessage(const String& line1, const String& line2 = "", 
-                    const String& line3 = "", const String& line4 = "");
+    // Display methods - using const char* for heap safety
     void showMessage(const char* line1, const char* line2 = "", 
                     const char* line3 = "", const char* line4 = "");
     

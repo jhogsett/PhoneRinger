@@ -205,7 +205,7 @@ bool EncoderManager::getButtonState() const {
     return currentButtonState;
 }
 
-String EncoderManager::getEventString(EncoderEvent event) const {
+const char* EncoderManager::getEventString(EncoderEvent event) const {
     switch (event) {
         case NONE: return "NONE";
         case CLOCKWISE: return "CLOCKWISE";
