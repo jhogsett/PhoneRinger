@@ -24,6 +24,8 @@ public:
     void clear();
     void showMessage(const String& line1, const String& line2 = "", 
                     const String& line3 = "", const String& line4 = "");
+    void showMessage(const char* line1, const char* line2 = "", 
+                    const char* line3 = "", const char* line4 = "");
     
     // Display specific screens
     void showStatus(const RingerManager* ringerManager, bool paused, int maxConcurrent = -1);

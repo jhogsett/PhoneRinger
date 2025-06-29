@@ -23,6 +23,12 @@ int currentMenuItem = 0;
 int maxConcurrentSetting = MAX_CONCURRENT_ACTIVE_PHONES;  // Local copy for menu editing
 int activeRelaySetting = NUM_PHONES;  // Number of active relays (0-8)
 
+// Static buffers for menu display - avoid String concatenation
+char menuBuffer1[21];  // LCD line buffer (20 chars + null terminator)
+char menuBuffer2[21];  // LCD line buffer
+char menuBuffer3[21];  // LCD line buffer
+char menuBuffer4[21];  // LCD line buffer
+
 // Menu Items
 enum MenuItems {
   MENU_CONCURRENT_LIMIT = 0,
@@ -349,8 +355,9 @@ void handleEncoderEvents() {
               Serial.print(F("Current value: "));
               Serial.println(maxConcurrentSetting);
               inAdjustmentMode = true;  // Enter adjustment mode
+              snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", maxConcurrentSetting);
               displayManager.showMessage("Concurrent Limit", 
-                                         String("Setting: ") + String(maxConcurrentSetting),
+                                         menuBuffer2,
                                          "Turn: Adjust (1-8)", "Press: Save & Back");
               break;
               
@@ -359,8 +366,9 @@ void handleEncoderEvents() {
               Serial.print(F("Current value: "));
               Serial.println(activeRelaySetting);
               inAdjustmentMode = true;  // Enter adjustment mode
+              snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", activeRelaySetting);
               displayManager.showMessage("Active Relays", 
-                                         String("Setting: ") + String(activeRelaySetting),
+                                         menuBuffer2,
                                          "Turn: Adjust (0-8)", "Press: Save & Back");
               break;
               
@@ -385,16 +393,18 @@ void handleEncoderEvents() {
             maxConcurrentSetting++;
             Serial.print(F("MENU: Concurrent limit increased to "));
             Serial.println(maxConcurrentSetting);
+            snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", maxConcurrentSetting);
             displayManager.showMessage("Concurrent Limit", 
-                                       String("Setting: ") + String(maxConcurrentSetting),
+                                       menuBuffer2,
                                        "Turn: Adjust (1-8)", "Press: Save & Back");
           } else if (inAdjustmentMode && currentMenuItem == MENU_ACTIVE_RELAYS && activeRelaySetting < 8) {
             // If we're adjusting active relay count, increment the value
             activeRelaySetting++;
             Serial.print(F("MENU: Active relays increased to "));
             Serial.println(activeRelaySetting);
+            snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", activeRelaySetting);
             displayManager.showMessage("Active Relays", 
-                                       String("Setting: ") + String(activeRelaySetting),
+                                       menuBuffer2,
                                        "Turn: Adjust (0-8)", "Press: Save & Back");
           } else if (!inAdjustmentMode) {
             // Navigate to next menu item
@@ -412,16 +422,18 @@ void handleEncoderEvents() {
             maxConcurrentSetting--;
             Serial.print(F("MENU: Concurrent limit decreased to "));
             Serial.println(maxConcurrentSetting);
+            snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", maxConcurrentSetting);
             displayManager.showMessage("Concurrent Limit", 
-                                       String("Setting: ") + String(maxConcurrentSetting),
+                                       menuBuffer2,
                                        "Turn: Adjust (1-8)", "Press: Save & Back");
           } else if (inAdjustmentMode && currentMenuItem == MENU_ACTIVE_RELAYS && activeRelaySetting > 0) {
             // If we're adjusting active relay count, decrement the value
             activeRelaySetting--;
             Serial.print(F("MENU: Active relays decreased to "));
             Serial.println(activeRelaySetting);
+            snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", activeRelaySetting);
             displayManager.showMessage("Active Relays", 
-                                       String("Setting: ") + String(activeRelaySetting),
+                                       menuBuffer2,
                                        "Turn: Adjust (0-8)", "Press: Save & Back");
           } else if (!inAdjustmentMode) {
             // Navigate to previous menu item
@@ -436,8 +448,9 @@ void handleEncoderEvents() {
         case EncoderManager::BUTTON_LONG_PRESS:
           Serial.println(F("Long press: Reset concurrent limit to default"));
           maxConcurrentSetting = MAX_CONCURRENT_ACTIVE_PHONES;
+          snprintf(menuBuffer2, sizeof(menuBuffer2), "Reset to: %d", maxConcurrentSetting);
           displayManager.showMessage("Concurrent Limit", 
-                                     String("Reset to: ") + String(maxConcurrentSetting),
+                                     menuBuffer2,
                                      "Turn: Adjust (1-8)", "Press: Save & Back");
           break;
           

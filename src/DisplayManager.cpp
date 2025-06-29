@@ -135,6 +135,30 @@ void DisplayManager::showMessage(const String& line1, const String& line2,
     }
 }
 
+void DisplayManager::showMessage(const char* line1, const char* line2, 
+                                const char* line3, const char* line4) {
+    if (!lcdAvailable) return; // Skip if LCD not available
+    
+    lcd.clear();
+    
+    if (line1 && strlen(line1) > 0) {
+        lcd.setCursor(0, 0);
+        lcd.print(padString(String(line1), 20));  // Still use padString for now
+    }
+    if (line2 && strlen(line2) > 0) {
+        lcd.setCursor(0, 1);
+        lcd.print(padString(String(line2), 20));
+    }
+    if (line3 && strlen(line3) > 0) {
+        lcd.setCursor(0, 2);
+        lcd.print(padString(String(line3), 20));
+    }
+    if (line4 && strlen(line4) > 0) {
+        lcd.setCursor(0, 3);
+        lcd.print(padString(String(line4), 20));
+    }
+}
+
 void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused, int maxConcurrent) {
     if (!lcdAvailable) return; // Skip if LCD not available
     
