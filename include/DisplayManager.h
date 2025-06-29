@@ -31,6 +31,7 @@ public:
     void showStartupMessage();
     void showPauseMessage();
     void showResumeMessage();
+    void showChaosMessage(); // Maximum chaos easter egg display
 
 private:
     hd44780_I2Cexp lcd; // declare lcd object: auto locate & auto config expander chip

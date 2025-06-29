@@ -3,6 +3,7 @@
 #include "DisplayManager.h"
 #include "EncoderManager.h"
 #include "SettingsManager.h"
+#include "RandomSeed.h"
 
 // Hardware pin definitions - Updated for your specific setup
 const int RELAY_PINS[] = {5, 6, 7, 8, 9, 10, 11, 12}; // Digital pins 5-12 for 8-relay module
@@ -13,6 +14,11 @@ const int NUM_PHONES = 8;
                                          // Reduce this value for power supply testing (1-8)
                                          // Set to 1 for single-phone testing
                                          // Set to 8 to disable concurrent limiting
+
+// Maximum Chaos Mode Settings - The ultimate CallStorm 2000 experience!
+#define CHAOS_ACTIVE_RELAYS 8        // All relays enabled
+#define CHAOS_MAX_CONCURRENT 8       // All phones can ring simultaneously  
+#define CHAOS_MIN_CALL_DELAY 10      // Minimum delay = maximum frequency
 
 // Debug Mode - Set to true to silence normal operation serial output
 #define DEBUG_ENCODER_MODE true  // Only show encoder events when true
@@ -48,8 +54,8 @@ const char* menuItemNames[] = {
 };
 
 // UI Hardware pins
-const int ENCODER_PIN_A = 2;      // Encoder A
-const int ENCODER_PIN_B = 3;      // Encoder B  
+const int ENCODER_PIN_A = 3;      // Encoder A
+const int ENCODER_PIN_B = 2;      // Encoder B  
 const int ENCODER_BUTTON = 4;     // Encoder button
 const int PAUSE_BUTTON = A0;      // System pause button (moved from pin 13)
 const int STATUS_LED = 13;        // System status LED (onboard LED)
@@ -82,6 +88,7 @@ bool canStartNewCall();  // Check if a new call can start (respects concurrent l
 void handleEncoderEvents();  // Handle rotary encoder input
 void loadSettingsFromEEPROM();
 void saveSettingsToEEPROM();
+void activateMaximumChaos(); // 🌪️ Maximum Chaos Easter Egg!
 
 void setup() {
   Serial.begin(115200);
@@ -90,8 +97,9 @@ void setup() {
     Serial.println(F("Hardware: 8-Relay Module + 20x4 LCD + Rotary Encoder + Pause Button"));
   }
   
-  // Seed the random number generator with analog noise
-  randomSeed(analogRead(A0));
+  // Seed the random number generator with atmospheric noise using improved randomizer
+  RandomSeed<A1> atmosphericRNG;  // Use A1 for dedicated random seeding (A0 is pause button)
+  atmosphericRNG.randomize();
   
   // Initialize relay pins as outputs (active LOW for most relay modules)
   for (int i = 0; i < NUM_PHONES; i++) {
@@ -522,7 +530,8 @@ void handleEncoderEvents() {
           break;
           
         case EncoderManager::BUTTON_LONG_PRESS:
-          Serial.println(F("Long press: Would reset to defaults"));
+          Serial.println(F("🌪️ MAXIMUM CHAOS MODE ACTIVATED! 🌪️"));
+          activateMaximumChaos();
           break;
           
         default:
@@ -563,4 +572,37 @@ void saveSettingsToEEPROM() {
   } else {
     Serial.println(F("Failed to save settings to EEPROM"));
   }
+}
+
+// 🌪️ MAXIMUM CHAOS MODE - The ultimate CallStorm 2000 experience!
+void activateMaximumChaos() {
+  Serial.println(F(""));
+  Serial.println(F("========================================"));
+  Serial.println(F("🌪️  CALLSTORM 2000 MAXIMUM CHAOS  🌪️"));
+  Serial.println(F("========================================"));
+  Serial.println(F("ALL SYSTEMS TO MAXIMUM!"));
+  Serial.println(F("ACTIVATING FULL SPECTRUM CHAOS!"));
+  Serial.println(F(""));
+  
+  // Apply maximum chaos settings
+  maxConcurrentSetting = CHAOS_MAX_CONCURRENT;
+  activeRelaySetting = CHAOS_ACTIVE_RELAYS;
+  maxCallDelaySetting = CHAOS_MIN_CALL_DELAY;
+  
+  // Re-seed with maximum entropy for true chaos
+  RandomSeed<A1> chaosRNG;
+  chaosRNG.randomize();
+  
+  // Save chaos settings to EEPROM for persistence
+  saveSettingsToEEPROM();
+  
+  // Display dramatic chaos message
+  displayManager.showChaosMessage();
+  
+  Serial.print(F("⚡ Active Relays: ")); Serial.print(activeRelaySetting); Serial.println(F(" (ALL!)"));
+  Serial.print(F("⚡ Max Concurrent: ")); Serial.print(maxConcurrentSetting); Serial.println(F(" (UNLIMITED!)"));  
+  Serial.print(F("⚡ Call Frequency: ")); Serial.print(maxCallDelaySetting); Serial.println(F("s (MAXIMUM!)"));
+  Serial.println(F(""));
+  Serial.println(F("🔥 BRACE FOR IMPACT! 🔥"));
+  Serial.println(F("========================================"));
 }

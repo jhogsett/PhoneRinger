@@ -260,3 +260,12 @@ void DisplayManager::showResumeMessage() {
     delay(1000); // Show resume message briefly
     displayNeedsUpdate = true;
 }
+
+void DisplayManager::showChaosMessage() {
+    showMessage("CallStorm 2000",
+                "** MAXIMUM CHAOS **",
+                "ALL SYSTEMS ACTIVE!",
+                "BRACE FOR IMPACT!");
+    delay(3000); // Show chaos message for 3 seconds
+    displayNeedsUpdate = true;
+}
