@@ -41,8 +41,7 @@ public:
     // Check if currently in a call sequence
     bool isActive() const;
     
-    // Get current state for display
-    String getStateString() const;
+    // Note: getStateString() removed for heap safety
 
 private:
     enum RingerState {
@@ -77,7 +76,7 @@ private:
     // Helper methods
     void setRelayState(bool active);
     unsigned long getRandomWaitTime();
-    void debugPrint(const String& message);
+    // Note: debugPrint(String) removed for heap safety
 };
 
 #endif

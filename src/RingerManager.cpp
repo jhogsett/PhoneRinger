@@ -141,36 +141,6 @@ bool RingerManager::isPhoneActive(int phoneIndex) const {
     return false;
 }
 
-String RingerManager::getPhoneStatus(int phoneIndex) const {
-    if (phoneIndex >= 0 && phoneIndex < phoneCount) {
-        return ringers[phoneIndex].getStateString();
-    }
-    return "Invalid";
-}
-
-String RingerManager::getStatusLine1() const {
-    String status = "Calls: ";
-    status += String(getActiveCallCount());
-    status += "/";
-    status += String(phoneCount);
-    return status;
-}
-
-String RingerManager::getStatusLine2() const {
-    String status = "Ring: ";
-    status += String(getRingingPhoneCount());
-    status += " Active: ";
-    status += String(getActiveCallCount());
-    return status;
-}
-
-void RingerManager::debugPrint(const String& message) const {
-    // Only print if serial output is enabled
-    if (enableSerialOutput) {
-        Serial.println(message);
-    }
-}
-
 void RingerManager::printStatus() const {
     if (!enableSerialOutput) return;  // Don't print if serial output is disabled
     

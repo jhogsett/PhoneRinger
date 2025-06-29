@@ -51,14 +51,9 @@ public:
     // Individual phone status
     bool isPhoneRinging(int phoneIndex) const;
     bool isPhoneActive(int phoneIndex) const;
-    String getPhoneStatus(int phoneIndex) const;
     
     // Print status to Serial
     void printStatus() const;
-    
-    // Get status for display
-    String getStatusLine1() const;
-    String getStatusLine2() const;
 
 private:
     TelephoneRinger* ringers;
@@ -70,8 +65,7 @@ private:
     
     static const unsigned long STATUS_PRINT_INTERVAL = 10000; // Print status every 10 seconds
     
-    // Helper methods
-    void debugPrint(const String& message) const;
+    // Note: Legacy debugPrint(String) method removed for heap safety
 };
 
 #endif

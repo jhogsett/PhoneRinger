@@ -45,10 +45,7 @@ private:
     static const unsigned long FAST_UPDATE_INTERVAL = 100;     // 0.1 seconds for active changes
     
     // Helper methods
-    String formatTime(unsigned long milliseconds);
-    String formatPhoneStatus(const RingerManager* ringerManager);
-    String formatActiveCount(const RingerManager* ringerManager);
-    void centerText(String text, int line, int width = 20);
+    // Note: Legacy String-based methods removed for heap safety
 };
 
 #endif

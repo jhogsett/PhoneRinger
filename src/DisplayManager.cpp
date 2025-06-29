@@ -120,22 +120,22 @@ void DisplayManager::showMessage(const String& line1, const String& line2,
     
     if (line1.length() > 0) {
         lcd.setCursor(0, 0);
-        padStringToGlobalBuffer(line1.c_str());
+        padStringToGlobalBuffer(line1.c_str(), 20);
         lcd.print(globalStringBuffer);
     }
     if (line2.length() > 0) {
         lcd.setCursor(0, 1);
-        padStringToGlobalBuffer(line2.c_str());
+        padStringToGlobalBuffer(line2.c_str(), 20);
         lcd.print(globalStringBuffer);
     }
     if (line3.length() > 0) {
         lcd.setCursor(0, 2);
-        padStringToGlobalBuffer(line3.c_str());
+        padStringToGlobalBuffer(line3.c_str(), 20);
         lcd.print(globalStringBuffer);
     }
     if (line4.length() > 0) {
         lcd.setCursor(0, 3);
-        padStringToGlobalBuffer(line4.c_str());
+        padStringToGlobalBuffer(line4.c_str(), 20);
         lcd.print(globalStringBuffer);
     }
 }
@@ -148,22 +148,22 @@ void DisplayManager::showMessage(const char* line1, const char* line2,
     
     if (line1 && strlen(line1) > 0) {
         lcd.setCursor(0, 0);
-        padStringToGlobalBuffer(line1);
+        padStringToGlobalBuffer(line1, 20);
         lcd.print(globalStringBuffer);
     }
     if (line2 && strlen(line2) > 0) {
         lcd.setCursor(0, 1);
-        padStringToGlobalBuffer(line2);
+        padStringToGlobalBuffer(line2, 20);
         lcd.print(globalStringBuffer);
     }
     if (line3 && strlen(line3) > 0) {
         lcd.setCursor(0, 2);
-        padStringToGlobalBuffer(line3);
+        padStringToGlobalBuffer(line3, 20);
         lcd.print(globalStringBuffer);
     }
     if (line4 && strlen(line4) > 0) {
         lcd.setCursor(0, 3);
-        padStringToGlobalBuffer(line4);
+        padStringToGlobalBuffer(line4, 20);
         lcd.print(globalStringBuffer);
     }
 }
@@ -273,57 +273,4 @@ void DisplayManager::showResumeMessage() {
                 "");
     delay(1000); // Show resume message briefly
     displayNeedsUpdate = true;
-}
-
-String DisplayManager::formatTime(unsigned long milliseconds) {
-    unsigned long seconds = milliseconds / 1000;
-    unsigned long minutes = seconds / 60;
-    seconds = seconds % 60;
-    
-    String timeStr = "";
-    if (minutes < 10) timeStr += "0";
-    timeStr += String(minutes) + ":";
-    if (seconds < 10) timeStr += "0";
-    timeStr += String(seconds);
-    
-    return timeStr;
-}
-
-String DisplayManager::formatPhoneStatus(const RingerManager* ringerManager) {
-    String status = "";
-    
-    // Limit to 8 phones max to prevent memory issues
-    int maxPhones = min(8, ringerManager->getTotalPhoneCount());
-    
-    // Format: "12345678" where each digit represents phone state
-    // R = Ringing, A = Active, . = Idle
-    for (int i = 0; i < maxPhones; i++) {
-        if (ringerManager->isPhoneRinging(i)) {
-            status += "R";  // Ringing
-        } else if (ringerManager->isPhoneActive(i)) {
-            status += "A";  // Active
-        } else {
-            status += ".";  // Idle
-        }
-    }
-    
-    // Add phone position labels on remaining space
-    if (status.length() < 20) {
-        status += " [12345678]";  // Shows which position is which phone
-    }
-    
-    return status;
-}
-
-String DisplayManager::formatActiveCount(const RingerManager* ringerManager) {
-    return "A:" + String(ringerManager->getActiveCallCount()) + 
-           " R:" + String(ringerManager->getRingingPhoneCount());
-}
-
-void DisplayManager::centerText(String text, int line, int width) {
-    if (!lcdAvailable) return; // Skip if LCD not available
-    
-    int padding = (width - text.length()) / 2;
-    lcd.setCursor(padding, line);
-    lcd.print(text);
 }

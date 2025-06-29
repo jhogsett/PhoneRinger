@@ -222,17 +222,6 @@ bool TelephoneRinger::isActive() const {
     return state != IDLE && state != WAITING;
 }
 
-String TelephoneRinger::getStateString() const {
-    switch (state) {
-        case IDLE: return "Idle";
-        case RING_ON: return "Ringing";
-        case RING_OFF: return "Silent";
-        case CALL_ANSWERED: return "Answered";
-        case WAITING: return "Waiting";
-        default: return "Unknown";
-    }
-}
-
 void TelephoneRinger::setRelayState(bool active) {
     if (relayPin >= 0) {
         // Most relay modules are active LOW, so invert the logic
@@ -258,10 +247,4 @@ unsigned long TelephoneRinger::getRandomWaitTime() {
     }
     
     return random(minDelay, maxDelay + 1);
-}
-
-void TelephoneRinger::debugPrint(const String& message) {
-    if (enableSerialOutput) {
-        Serial.println(message);
-    }
 }
