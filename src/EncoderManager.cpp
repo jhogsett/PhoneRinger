@@ -139,23 +139,33 @@ EncoderManager::EncoderEvent EncoderManager::checkButton() {
             currentButtonState = newState;
             
             if (newState == LOW && lastButtonState == HIGH) {
-                // Button just pressed
+                // Button just pressed - don't return BUTTON_PRESS immediately
+                // Wait to see if it becomes a long press
                 buttonPressed = true;
                 buttonPressTime = currentTime;
-                Serial.println(F("*** ENCODER BUTTON PRESSED ***"));
+                Serial.println(F("*** ENCODER BUTTON PRESSED (waiting for release/long-press) ***"));
                 lastButtonState = newState;
-                return BUTTON_PRESS;
+                // Don't return BUTTON_PRESS here - wait for release or long press
+                return NONE;
             }
             
             if (newState == HIGH && lastButtonState == LOW) {
-                // Button just released
+                // Button just released - check if it was a short press
                 unsigned long pressDuration = currentTime - buttonPressTime;
                 buttonPressed = false;
                 Serial.print(F("*** ENCODER BUTTON RELEASED after "));
                 Serial.print(pressDuration);
                 Serial.println(F("ms ***"));
                 lastButtonState = newState;
-                return BUTTON_RELEASE;
+                
+                // Only return BUTTON_PRESS if it was a short press (not a long press)
+                if (pressDuration < LONG_PRESS_TIME) {
+                    Serial.println(F("Short press detected on release"));
+                    return BUTTON_PRESS;
+                } else {
+                    Serial.println(F("Long press already handled, ignoring release"));
+                    return BUTTON_RELEASE;
+                }
             }
             
             Serial.println(F("=== DEBUG CONDITION CHECK ==="));

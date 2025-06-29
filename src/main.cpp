@@ -530,7 +530,6 @@ void handleEncoderEvents() {
           break;
           
         case EncoderManager::BUTTON_LONG_PRESS:
-          Serial.println(F("🌪️ MAXIMUM CHAOS MODE ACTIVATED! 🌪️"));
           activateMaximumChaos();
           break;
           
@@ -576,15 +575,7 @@ void saveSettingsToEEPROM() {
 
 // 🌪️ MAXIMUM CHAOS MODE - The ultimate CallStorm 2000 experience!
 void activateMaximumChaos() {
-  Serial.println(F(""));
-  Serial.println(F("========================================"));
-  Serial.println(F("🌪️  CALLSTORM 2000 MAXIMUM CHAOS  🌪️"));
-  Serial.println(F("========================================"));
-  Serial.println(F("ALL SYSTEMS TO MAXIMUM!"));
-  Serial.println(F("ACTIVATING FULL SPECTRUM CHAOS!"));
-  Serial.println(F(""));
-  
-  // Apply maximum chaos settings
+  // Apply maximum chaos settings silently
   maxConcurrentSetting = CHAOS_MAX_CONCURRENT;
   activeRelaySetting = CHAOS_ACTIVE_RELAYS;
   maxCallDelaySetting = CHAOS_MIN_CALL_DELAY;
@@ -596,13 +587,6 @@ void activateMaximumChaos() {
   // Save chaos settings to EEPROM for persistence
   saveSettingsToEEPROM();
   
-  // Display dramatic chaos message
+  // Display dramatic chaos message (the only visible feedback)
   displayManager.showChaosMessage();
-  
-  Serial.print(F("⚡ Active Relays: ")); Serial.print(activeRelaySetting); Serial.println(F(" (ALL!)"));
-  Serial.print(F("⚡ Max Concurrent: ")); Serial.print(maxConcurrentSetting); Serial.println(F(" (UNLIMITED!)"));  
-  Serial.print(F("⚡ Call Frequency: ")); Serial.print(maxCallDelaySetting); Serial.println(F("s (MAXIMUM!)"));
-  Serial.println(F(""));
-  Serial.println(F("🔥 BRACE FOR IMPACT! 🔥"));
-  Serial.println(F("========================================"));
 }
