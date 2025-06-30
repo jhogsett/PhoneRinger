@@ -60,6 +60,7 @@ const int ENCODER_BUTTON = 4;     // Encoder button
 const int PAUSE_BUTTON = A0;      // System pause button (moved from pin 13)
 const int STATUS_LED = 13;        // System status LED (onboard LED)
 const int RINGER_POWER_PIN = A2;  // Ringer power control (Pin 16/A2)
+const int READY_LED = A3;         // System ready LED (on when operational)
 // I2C pins A4 (SDA) and A5 (SCL) for 20x4 LCD display
 
 // System state
@@ -119,8 +120,10 @@ void setup() {
   pinMode(PAUSE_BUTTON, INPUT_PULLUP);
   pinMode(STATUS_LED, OUTPUT);
   pinMode(RINGER_POWER_PIN, OUTPUT);  // Initialize ringer power control pin
+  pinMode(READY_LED, OUTPUT);         // Initialize ready LED pin
   digitalWrite(STATUS_LED, LOW);  // Start with status LED off
   digitalWrite(RINGER_POWER_PIN, LOW);  // Ensure ringer power is off initially
+  digitalWrite(READY_LED, LOW);       // Start with ready LED off during initialization
   
   // Initialize the ringer manager with phone instances (using nullptr for config for now)
   ringerManager.initialize(RELAY_PINS, NUM_PHONES, nullptr, false);
@@ -153,6 +156,9 @@ void setup() {
     digitalWrite(RELAY_PINS[i], HIGH); // HIGH = inactive for active-LOW modules
     delay(100);
   }
+  
+  // System initialization complete - turn on ready LED
+  digitalWrite(READY_LED, HIGH);
 }
 
 void loop() {
