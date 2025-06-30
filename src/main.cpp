@@ -20,9 +20,6 @@ const int NUM_PHONES = 8;
 #define CHAOS_MAX_CONCURRENT 8       // All phones can ring simultaneously  
 #define CHAOS_MIN_CALL_DELAY 10      // Minimum delay = maximum frequency
 
-// Debug Mode - Set to true to silence normal operation serial output
-#define DEBUG_ENCODER_MODE true  // Only show encoder events when true
-
 // Menu System State
 bool inMenu = false;
 bool inAdjustmentMode = false;  // Track if we're adjusting a setting
@@ -30,6 +27,7 @@ int currentMenuItem = 0;
 int maxConcurrentSetting = MAX_CONCURRENT_ACTIVE_PHONES;  // Local copy for menu editing
 int activeRelaySetting = NUM_PHONES;  // Number of active relays (0-8)
 int maxCallDelaySetting = 30;  // Maximum delay between calls in seconds (10-1000, increments of 10)
+int ringerHangTimeSetting = 2;  // Ringer power hang time in seconds (0-60)
 
 // Static buffers for menu display - avoid String concatenation
 char menuBuffer1[21];  // LCD line buffer (20 chars + null terminator)
@@ -42,6 +40,7 @@ enum MenuItems {
   MENU_CONCURRENT_LIMIT = 0,
   MENU_ACTIVE_RELAYS,  // Number of active relays (0-8)
   MENU_CALL_FREQUENCY, // Maximum delay between calls (10-1000 seconds)
+  MENU_RINGER_HANG_TIME, // Ringer power hang time (0-60 seconds)
   MENU_EXIT,
   MENU_ITEM_COUNT
 };
@@ -50,6 +49,7 @@ const char* menuItemNames[] = {
   "Max Concurrent",
   "Active Phones",  
   "Call Timing",
+  "Ringer Hang Time",
   "Exit Menu"
 };
 
@@ -101,10 +101,6 @@ void saveAndExitMenu(); // 💾 Menu Long-Press: Save & Exit
 
 void setup() {
   Serial.begin(115200);
-  if (!DEBUG_ENCODER_MODE) {
-    Serial.println(F("CallStorm Simulator Starting..."));
-    Serial.println(F("Hardware: 8-Relay Module + 20x4 LCD + Rotary Encoder + Pause Button"));
-  }
   
   // Seed the random number generator with atmospheric noise using improved randomizer
   RandomSeed<A1> atmosphericRNG;  // Use A1 for dedicated random seeding (A0 is pause button)
@@ -127,7 +123,7 @@ void setup() {
   digitalWrite(RINGER_POWER_PIN, LOW);  // Ensure ringer power is off initially
   
   // Initialize the ringer manager with phone instances (using nullptr for config for now)
-  ringerManager.initialize(RELAY_PINS, NUM_PHONES, nullptr, !DEBUG_ENCODER_MODE);
+  ringerManager.initialize(RELAY_PINS, NUM_PHONES, nullptr, false);
 
   // Load settings from EEPROM (before applying them)
   loadSettingsFromEEPROM();
@@ -142,56 +138,20 @@ void setup() {
   ringerManager.setCanStartCallCallbackForAllPhones(canStartNewCall);
   
   // Initialize the display
-  displayManager.initialize(!DEBUG_ENCODER_MODE);
+  displayManager.initialize(false);
   
   // Initialize the encoder
-  encoderManager.initialize(ENCODER_PIN_A, ENCODER_PIN_B, ENCODER_BUTTON, !DEBUG_ENCODER_MODE);
+  encoderManager.initialize(ENCODER_PIN_A, ENCODER_PIN_B, ENCODER_BUTTON, false);
   
   // Load settings from EEPROM
   loadSettingsFromEEPROM();
   
-  if (!DEBUG_ENCODER_MODE) {
-    Serial.println(F("CallStorm Simulator Ready!"));
-    Serial.println(F("Hardware Configuration:"));
-    Serial.println(F("- 8 phone lines on pins 5-12"));
-    Serial.print(F("- Actual pin assignments: "));
-    for (int i = 0; i < NUM_PHONES; i++) {
-      Serial.print(RELAY_PINS[i]);
-      if (i < NUM_PHONES - 1) Serial.print(F(", "));
-    }
-    Serial.println();
-    Serial.println(F("- Rotary encoder on pins 2,3,4"));
-    Serial.println(F("- Pause button on pin A0"));
-    Serial.println(F("- Status LED on pin 13 (onboard)"));
-    Serial.println(F("- 20x4 LCD on I2C (A4/A5)"));
-    Serial.print(F("- Concurrent phone limit: "));
-    Serial.print(maxConcurrentSetting);
-    Serial.println(F(" phones maximum"));
-    Serial.println(F("Press pause button (pin A0) to stop/start all activity"));
-    Serial.println(F("Status LED: ON=phones ringing, Fast Blink=paused, OFF=idle"));
-    
-    // Test each relay briefly to verify connections
-    Serial.println(F("Testing relay connections..."));
-    for (int i = 0; i < NUM_PHONES; i++) {
-      Serial.print(F("Testing relay "));
-      Serial.print(i + 1);
-      Serial.print(F(" on pin "));
-      Serial.println(RELAY_PINS[i]);
-      digitalWrite(RELAY_PINS[i], LOW);  // LOW = active for active-LOW modules
-      delay(200);
-      digitalWrite(RELAY_PINS[i], HIGH); // HIGH = inactive for active-LOW modules
-      delay(100);
-    }
-    Serial.println(F("Relay test complete. Starting normal operation..."));
-  } else {
-    // Silent mode - just do the relay test without serial output
-    for (int i = 0; i < NUM_PHONES; i++) {
-      digitalWrite(RELAY_PINS[i], LOW);  // LOW = active for active-LOW modules
-      delay(200);
-      digitalWrite(RELAY_PINS[i], HIGH); // HIGH = inactive for active-LOW modules
-      delay(100);
-    }
-    Serial.println(F("=== ENCODER DEBUG MODE - Only encoder events will be shown ==="));
+  // Test each relay briefly to verify connections
+  for (int i = 0; i < NUM_PHONES; i++) {
+    digitalWrite(RELAY_PINS[i], LOW);  // LOW = active for active-LOW modules
+    delay(200);
+    digitalWrite(RELAY_PINS[i], HIGH); // HIGH = inactive for active-LOW modules
+    delay(100);
   }
 }
 
@@ -214,10 +174,6 @@ void loop() {
   if (lastActiveRelayCount != activeRelaySetting) {
     ringerManager.setActiveRelayCount(activeRelaySetting);
     lastActiveRelayCount = activeRelaySetting;
-    if (!DEBUG_ENCODER_MODE) {
-      Serial.print(F("Active relays changed to: "));
-      Serial.println(activeRelaySetting);
-    }
   }
   
   // Update display (only when not in menu mode)
@@ -238,28 +194,10 @@ void loop() {
 void checkPauseButton() {
   bool currentButtonState = digitalRead(PAUSE_BUTTON);
   
-  // Debug output every 5000ms to see button state (only if not in encoder debug mode)
-  if (!DEBUG_ENCODER_MODE) {
-    static unsigned long lastDebugTime = 0;
-    if (millis() - lastDebugTime > 5000) {
-      Serial.print(F("Pause Button: "));
-      Serial.print(currentButtonState ? "HIGH" : "LOW");
-      Serial.print(F(" | Paused: "));
-      Serial.println(systemPaused ? "YES" : "NO");
-      lastDebugTime = millis();
-    }
-  }
-  
   // Simple debounce: if button state changed, reset debounce timer
   if (currentButtonState != lastPauseButtonState) {
     lastPauseDebounce = millis();
     pauseButtonPressed = false; // Reset press flag
-    if (!DEBUG_ENCODER_MODE) {
-      Serial.print(F("Button changed: "));
-      Serial.print(lastPauseButtonState ? "HIGH" : "LOW");
-      Serial.print(F(" -> "));
-      Serial.println(currentButtonState ? "HIGH" : "LOW");
-    }
   }
   
   // Check if enough time has passed for debounce
@@ -267,17 +205,11 @@ void checkPauseButton() {
     // If button is pressed (LOW) and we haven't processed this press yet
     if (currentButtonState == LOW && !pauseButtonPressed) {
       pauseButtonPressed = true; // Mark as processed
-      if (!DEBUG_ENCODER_MODE) {
-        Serial.println(F("*** PAUSE BUTTON PRESSED - TOGGLING STATE ***"));
-      }
       
       // Toggle pause state
       systemPaused = !systemPaused;
       
       if (systemPaused) {
-        if (!DEBUG_ENCODER_MODE) {
-          Serial.println(F("*** SYSTEM PAUSED - Stopping all activity ***"));
-        }
         // Turn off all relays immediately but don't stop the call state machines
         // This preserves timing so calls remain unsynchronized when resumed
         for (int i = 0; i < NUM_PHONES; i++) {
@@ -285,9 +217,6 @@ void checkPauseButton() {
         }
         displayManager.showPauseMessage();
       } else {
-        if (!DEBUG_ENCODER_MODE) {
-          Serial.println(F("*** SYSTEM RESUMED - Activity will restart ***"));
-        }
         displayManager.showResumeMessage();
       }
     }
@@ -334,9 +263,6 @@ void updateRingerPowerControl() {
     if (ringerPowerActive) {
       ringerPowerActive = false;
       digitalWrite(RINGER_POWER_PIN, LOW);
-      if (!DEBUG_ENCODER_MODE) {
-        Serial.println(F("Ringer power OFF (system paused)"));
-      }
     }
     return;
   }
@@ -349,22 +275,16 @@ void updateRingerPowerControl() {
     if (!ringerPowerActive) {
       ringerPowerActive = true;
       digitalWrite(RINGER_POWER_PIN, HIGH);
-      if (!DEBUG_ENCODER_MODE) {
-        Serial.println(F("Ringer power ON"));
-      }
     }
     // Reset the hang timer while phones are active
     ringerPowerStartTime = currentTime;
   } else {
     // No active phones - check hang time
     if (ringerPowerActive) {
-      if (currentTime - ringerPowerStartTime >= RINGER_POWER_HANG_TIME) {
+      if (currentTime - ringerPowerStartTime >= (ringerHangTimeSetting * 1000UL)) {
         // Hang time expired, turn off ringer power
         ringerPowerActive = false;
         digitalWrite(RINGER_POWER_PIN, LOW);
-        if (!DEBUG_ENCODER_MODE) {
-          Serial.println(F("Ringer power OFF (hang time expired)"));
-        }
       }
     }
   }
@@ -384,15 +304,6 @@ bool canStartNewCall() {
   int currentActivePhones = globalRingerManager->getActiveCallCount();
   bool canStart = currentActivePhones < maxConcurrentSetting;
   
-  // Optional debug output (can be commented out for production)
-  if (!canStart && !DEBUG_ENCODER_MODE) {
-    Serial.print(F("Concurrent limit reached: "));
-    Serial.print(currentActivePhones);
-    Serial.print(F("/"));
-    Serial.print(maxConcurrentSetting);
-    Serial.println(F(" phones already active"));
-  }
-  
   return canStart;
 }
 
@@ -401,35 +312,21 @@ void handleEncoderEvents() {
   EncoderManager::EncoderEvent event = encoderManager.update();
   
   if (event != EncoderManager::NONE) {
-    Serial.print(F("Encoder Event: "));
-    Serial.println(encoderManager.getEventString(event));
-    
     // Handle button press for menu toggle/selection
     if (event == EncoderManager::BUTTON_PRESS) {
       if (!inMenu) {
         inMenu = true;
         inAdjustmentMode = false;
         currentMenuItem = 0;  // Start at first menu item
-        Serial.println(F("*** ENTERING MENU MODE ***"));
-        Serial.print(F("Menu Item: "));
-        Serial.println(menuItemNames[currentMenuItem]);
         displayManager.showMenuMessage("* SETTINGS *", menuItemNames[currentMenuItem], 
                                    "Turn: Navigate", "Press: Select/Exit");
       } else {
         // In menu - handle selection
         if (inAdjustmentMode) {
           // We're adjusting a setting - save and return to menu navigation
-          Serial.println(F("*** SAVING SETTING & RETURNING TO MENU ***"));
           
           // Save all settings to EEPROM when any setting is changed
           saveSettingsToEEPROM();
-          
-          Serial.print(F("Settings saved: Concurrent="));
-          Serial.print(maxConcurrentSetting);
-          Serial.print(F(", Active="));
-          Serial.print(activeRelaySetting);
-          Serial.print(F(", Frequency="));
-          Serial.println(maxCallDelaySetting);
           
           inAdjustmentMode = false;  // Exit adjustment mode but stay in menu
           // Show the current menu item again
@@ -439,9 +336,6 @@ void handleEncoderEvents() {
           // Not in adjustment mode - handle menu selection
           switch (currentMenuItem) {
             case MENU_CONCURRENT_LIMIT:
-              Serial.println(F("*** SELECTED: Max Concurrent ***"));
-              Serial.print(F("Current value: "));
-              Serial.println(maxConcurrentSetting);
               inAdjustmentMode = true;  // Enter adjustment mode
               snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", maxConcurrentSetting);
               displayManager.showMessage("Max Concurrent", 
@@ -450,9 +344,6 @@ void handleEncoderEvents() {
               break;
               
             case MENU_ACTIVE_RELAYS:
-              Serial.println(F("*** SELECTED: Active Phones ***"));
-              Serial.print(F("Current value: "));
-              Serial.println(activeRelaySetting);
               inAdjustmentMode = true;  // Enter adjustment mode
               snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", activeRelaySetting);
               displayManager.showMessage("Active Phones", 
@@ -461,10 +352,6 @@ void handleEncoderEvents() {
               break;
               
             case MENU_CALL_FREQUENCY:
-              Serial.println(F("*** SELECTED: Call Timing ***"));
-              Serial.print(F("Current value: "));
-              Serial.print(maxCallDelaySetting);
-              Serial.println(F(" seconds"));
               inAdjustmentMode = true;  // Enter adjustment mode
               snprintf(menuBuffer2, sizeof(menuBuffer2), "Max: %ds", maxCallDelaySetting);
               displayManager.showMessage("Call Timing", 
@@ -472,10 +359,17 @@ void handleEncoderEvents() {
                                          "Turn: +/-10s (10-1000)", "Press: Save & Back");
               break;
               
+            case MENU_RINGER_HANG_TIME:
+              inAdjustmentMode = true;  // Enter adjustment mode
+              snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %ds", ringerHangTimeSetting);
+              displayManager.showMessage("Ringer Hang Time", 
+                                         menuBuffer2,
+                                         "Turn: +/-1s (0-60)", "Press: Save & Back");
+              break;
+              
             case MENU_EXIT:
               inMenu = false;
               inAdjustmentMode = false;
-              Serial.println(F("*** EXITING MENU MODE ***"));
               displayManager.showStatus(&ringerManager, systemPaused, maxConcurrentSetting);
               break;
           }
@@ -491,8 +385,6 @@ void handleEncoderEvents() {
           if (inAdjustmentMode && currentMenuItem == MENU_CONCURRENT_LIMIT && maxConcurrentSetting < 8) {
             // If we're adjusting concurrent limit, increment the value
             maxConcurrentSetting++;
-            Serial.print(F("MENU: Concurrent limit increased to "));
-            Serial.println(maxConcurrentSetting);
             snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", maxConcurrentSetting);
             displayManager.showMessage("Max Concurrent", 
                                        menuBuffer2,
@@ -500,8 +392,6 @@ void handleEncoderEvents() {
           } else if (inAdjustmentMode && currentMenuItem == MENU_ACTIVE_RELAYS && activeRelaySetting < 8) {
             // If we're adjusting active relay count, increment the value
             activeRelaySetting++;
-            Serial.print(F("MENU: Active relays increased to "));
-            Serial.println(activeRelaySetting);
             snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", activeRelaySetting);
             displayManager.showMessage("Active Phones", 
                                        menuBuffer2,
@@ -509,18 +399,20 @@ void handleEncoderEvents() {
           } else if (inAdjustmentMode && currentMenuItem == MENU_CALL_FREQUENCY && maxCallDelaySetting < 1000) {
             // If we're adjusting call frequency, increment the value
             maxCallDelaySetting += 10;
-            Serial.print(F("MENU: Call frequency increased to "));
-            Serial.print(maxCallDelaySetting);
-            Serial.println(F(" seconds"));
             snprintf(menuBuffer2, sizeof(menuBuffer2), "Max: %ds", maxCallDelaySetting);
             displayManager.showMessage("Call Timing", 
                                        menuBuffer2,
                                        "Turn: +/-10s (10-1000)", "Press: Save & Back");
+          } else if (inAdjustmentMode && currentMenuItem == MENU_RINGER_HANG_TIME && ringerHangTimeSetting < 60) {
+            // If we're adjusting ringer hang time, increment the value
+            ringerHangTimeSetting++;
+            snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %ds", ringerHangTimeSetting);
+            displayManager.showMessage("Ringer Hang Time", 
+                                       menuBuffer2,
+                                       "Turn: +/-1s (0-60)", "Press: Save & Back");
           } else if (!inAdjustmentMode) {
             // Navigate to next menu item
             currentMenuItem = (currentMenuItem + 1) % MENU_ITEM_COUNT;
-            Serial.print(F("MENU: Navigate to "));
-            Serial.println(menuItemNames[currentMenuItem]);
             displayManager.showMenuMessage("* SETTINGS *", menuItemNames[currentMenuItem], 
                                        "Turn: Navigate", "Press: Select/Exit");
           }
@@ -530,8 +422,6 @@ void handleEncoderEvents() {
           if (inAdjustmentMode && currentMenuItem == MENU_CONCURRENT_LIMIT && maxConcurrentSetting > 1) {
             // If we're adjusting concurrent limit, decrement the value
             maxConcurrentSetting--;
-            Serial.print(F("MENU: Concurrent limit decreased to "));
-            Serial.println(maxConcurrentSetting);
             snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", maxConcurrentSetting);
             displayManager.showMessage("Max Concurrent", 
                                        menuBuffer2,
@@ -539,8 +429,6 @@ void handleEncoderEvents() {
           } else if (inAdjustmentMode && currentMenuItem == MENU_ACTIVE_RELAYS && activeRelaySetting > 0) {
             // If we're adjusting active relay count, decrement the value
             activeRelaySetting--;
-            Serial.print(F("MENU: Active relays decreased to "));
-            Serial.println(activeRelaySetting);
             snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %d", activeRelaySetting);
             displayManager.showMessage("Active Phones", 
                                        menuBuffer2,
@@ -548,18 +436,20 @@ void handleEncoderEvents() {
           } else if (inAdjustmentMode && currentMenuItem == MENU_CALL_FREQUENCY && maxCallDelaySetting > 10) {
             // If we're adjusting call frequency, decrement the value
             maxCallDelaySetting -= 10;
-            Serial.print(F("MENU: Call frequency decreased to "));
-            Serial.print(maxCallDelaySetting);
-            Serial.println(F(" seconds"));
             snprintf(menuBuffer2, sizeof(menuBuffer2), "Max: %ds", maxCallDelaySetting);
             displayManager.showMessage("Call Timing", 
                                        menuBuffer2,
                                        "Turn: +/-10s (10-1000)", "Press: Save & Back");
+          } else if (inAdjustmentMode && currentMenuItem == MENU_RINGER_HANG_TIME && ringerHangTimeSetting > 0) {
+            // If we're adjusting ringer hang time, decrement the value
+            ringerHangTimeSetting--;
+            snprintf(menuBuffer2, sizeof(menuBuffer2), "Setting: %ds", ringerHangTimeSetting);
+            displayManager.showMessage("Ringer Hang Time", 
+                                       menuBuffer2,
+                                       "Turn: +/-1s (0-60)", "Press: Save & Back");
           } else if (!inAdjustmentMode) {
             // Navigate to previous menu item
             currentMenuItem = (currentMenuItem - 1 + MENU_ITEM_COUNT) % MENU_ITEM_COUNT;
-            Serial.print(F("MENU: Navigate to "));
-            Serial.println(menuItemNames[currentMenuItem]);
             displayManager.showMenuMessage("* SETTINGS *", menuItemNames[currentMenuItem], 
                                        "Turn: Navigate", "Press: Select/Exit");
           }
@@ -567,7 +457,6 @@ void handleEncoderEvents() {
           
         case EncoderManager::BUTTON_LONG_PRESS:
           // Menu Long-Press: Save & Exit from any menu state
-          Serial.println(F("Menu Long-Press: Save & Exit"));
           saveAndExitMenu();
           break;
           
@@ -581,26 +470,18 @@ void handleEncoderEvents() {
         case EncoderManager::CLOCKWISE:
           if (activeRelaySetting < 8) {
             activeRelaySetting++;
-            Serial.print(F("OPERATION: Active relays increased to "));
-            Serial.println(activeRelaySetting);
             // Show brief +1 feedback and save to EEPROM
             displayManager.showRelayAdjustmentDirection(activeRelaySetting, true);
             saveSettingsToEEPROM();
-          } else {
-            Serial.println(F("OPERATION: Already at maximum relays (8)"));
           }
           break;
           
         case EncoderManager::COUNTER_CLOCKWISE:
           if (activeRelaySetting > 0) {
             activeRelaySetting--;
-            Serial.print(F("OPERATION: Active relays decreased to "));
-            Serial.println(activeRelaySetting);
             // Show brief -1 feedback and save to EEPROM
             displayManager.showRelayAdjustmentDirection(activeRelaySetting, false);
             saveSettingsToEEPROM();
-          } else {
-            Serial.println(F("OPERATION: Already at minimum relays (0)"));
           }
           break;
           
@@ -623,13 +504,9 @@ void loadSettingsFromEEPROM() {
     maxConcurrentSetting = settings.maxConcurrent;
     activeRelaySetting = settings.activeRelays;  
     maxCallDelaySetting = settings.maxCallDelay;
-    Serial.println(F("Settings loaded from EEPROM"));
-    Serial.print(F("  Concurrent Limit: ")); Serial.println(maxConcurrentSetting);
-    Serial.print(F("  Active Relays: ")); Serial.println(activeRelaySetting);
-    Serial.print(F("  Call Frequency: ")); Serial.println(maxCallDelaySetting);
+    ringerHangTimeSetting = settings.ringerHangTime;
   } else {
     // Failed to load - using defaults (already set)
-    Serial.println(F("Using default settings (EEPROM invalid/empty)"));
     saveSettingsToEEPROM(); // Save defaults to EEPROM
   }
 }
@@ -640,12 +517,9 @@ void saveSettingsToEEPROM() {
   settings.maxConcurrent = maxConcurrentSetting;
   settings.activeRelays = activeRelaySetting;
   settings.maxCallDelay = maxCallDelaySetting;
+  settings.ringerHangTime = ringerHangTimeSetting;
   
-  if (SettingsManager::saveSettings(settings)) {
-    Serial.println(F("Settings saved to EEPROM"));
-  } else {
-    Serial.println(F("Failed to save settings to EEPROM"));
-  }
+  SettingsManager::saveSettings(settings);
 }
 
 // 🌪️ MAXIMUM CHAOS MODE - The ultimate CallStorm 2000 experience!
@@ -683,14 +557,6 @@ void saveAndExitMenu() {
   // Exit menu mode and return to normal operation
   inMenu = false;
   inAdjustmentMode = false;
-  
-  Serial.println(F("*** MENU LONG-PRESS: SAVED & EXITED ***"));
-  Serial.print(F("Settings saved: Concurrent="));
-  Serial.print(maxConcurrentSetting);
-  Serial.print(F(", Active="));
-  Serial.print(activeRelaySetting);
-  Serial.print(F(", Frequency="));
-  Serial.println(maxCallDelaySetting);
   
   // The normal status display will resume automatically via the main loop
 }
