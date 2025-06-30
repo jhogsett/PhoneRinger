@@ -259,7 +259,7 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
     // Line 3: Active calls and ringing phones with enabled relay count (20 chars max)
     // Format: "A:0 R:0 En:8 Max:4" or "A:0 R:0 En:8" if no limit
     lcd.setCursor(0, 2);
-    if (maxConcurrent > 0 && maxConcurrent < ringerManager->getTotalPhoneCount()) {
+    if (maxConcurrent > 0 && maxConcurrent <= ringerManager->getTotalPhoneCount()) {
         snprintf(globalStringBuffer, sizeof(globalStringBuffer), "A:%d R:%d En:%d Max:%d", 
                 ringerManager->getActiveCallCount(),
                 ringerManager->getRingingPhoneCount(),
