@@ -266,23 +266,33 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
     }
     
     // Line 3: Active calls and ringing phones with enabled relay count (20 chars max)
-    // Format: "A:0 R:0 En:8 Max:4" or "A:0 R:0 En:8" if no limit
+    // Format: "A:0 R:0 E:8 M:4" or "A:0 R:0 E:8" if no limit (center-justified)
     lcd.setCursor(0, 2);
     if (maxConcurrent > 0 && maxConcurrent <= ringerManager->getTotalPhoneCount()) {
-        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "A:%d R:%d En:%d Max:%d", 
+        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "A:%d R:%d E:%d M:%d", 
                 ringerManager->getActiveCallCount(),
                 ringerManager->getRingingPhoneCount(),
                 ringerManager->getActivePhoneCount(),
                 maxConcurrent);
     } else {
-        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "A:%d R:%d En:%d", 
+        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "A:%d R:%d E:%d", 
                 ringerManager->getActiveCallCount(),
                 ringerManager->getRingingPhoneCount(),
                 ringerManager->getActivePhoneCount());
     }
-    // Pad to 20 characters
+    // Center justify the string in 20 characters
     int len = strlen(globalStringBuffer);
-    for (int i = len; i < 20; i++) {
+    int spaces = (20 - len) / 2;
+    // Move string to center position
+    for (int i = len - 1; i >= 0; i--) {
+        globalStringBuffer[i + spaces] = globalStringBuffer[i];
+    }
+    // Fill leading spaces
+    for (int i = 0; i < spaces; i++) {
+        globalStringBuffer[i] = ' ';
+    }
+    // Fill trailing spaces
+    for (int i = len + spaces; i < 20; i++) {
         globalStringBuffer[i] = ' ';
     }
     globalStringBuffer[20] = '\0';
