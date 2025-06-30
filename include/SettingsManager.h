@@ -5,7 +5,7 @@
 #include <EEPROM.h>
 
 // Version for settings format - increment when changing structure
-#define SETTINGS_VERSION 1
+#define SETTINGS_VERSION 2
 
 // EEPROM addresses
 #define EEPROM_VERSION_ADDR 0
@@ -17,6 +17,7 @@ struct Settings {
     uint8_t maxConcurrent;        // Concurrent phone limit (1-8)
     uint8_t activeRelays;         // Number of active relays (0-8)
     uint16_t maxCallDelay;        // Call frequency max delay in seconds (10-1000)
+    uint8_t ringerHangTime;       // Ringer power hang time in seconds (0-60)
     uint8_t checksum;             // Simple checksum for validation
 };
 
