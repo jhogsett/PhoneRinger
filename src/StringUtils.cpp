@@ -20,3 +20,29 @@ void padStringToGlobalBuffer(const char* str, int length) {
     // Null terminate
     globalStringBuffer[length] = '\0';
 }
+
+void centerStringToGlobalBuffer(const char* str, int length) {
+    int strLen = strlen(str);
+    
+    // Truncate if too long
+    int copyLen = min(strLen, length);
+    
+    // Calculate centering spaces
+    int spaces = (length - copyLen) / 2;
+    
+    // Fill with leading spaces
+    for (int i = 0; i < spaces; i++) {
+        globalStringBuffer[i] = ' ';
+    }
+    
+    // Copy the string
+    strncpy(globalStringBuffer + spaces, str, copyLen);
+    
+    // Fill with trailing spaces
+    for (int i = spaces + copyLen; i < length; i++) {
+        globalStringBuffer[i] = ' ';
+    }
+    
+    // Null terminate
+    globalStringBuffer[length] = '\0';
+}

@@ -211,6 +211,34 @@ void DisplayManager::showMessage(const char* line1, const char* line2,
     }
 }
 
+void DisplayManager::showMenuMessage(const char* line1, const char* line2, 
+                                    const char* line3, const char* line4) {
+    if (!lcdAvailable) return; // Skip if LCD not available
+    
+    lcd.clear();
+    
+    if (line1 && strlen(line1) > 0) {
+        lcd.setCursor(0, 0);
+        centerStringToGlobalBuffer(line1, 20);  // Center the menu header
+        lcd.print(globalStringBuffer);
+    }
+    if (line2 && strlen(line2) > 0) {
+        lcd.setCursor(0, 1);
+        padStringToGlobalBuffer(line2, 20);
+        lcd.print(globalStringBuffer);
+    }
+    if (line3 && strlen(line3) > 0) {
+        lcd.setCursor(0, 2);
+        padStringToGlobalBuffer(line3, 20);
+        lcd.print(globalStringBuffer);
+    }
+    if (line4 && strlen(line4) > 0) {
+        lcd.setCursor(0, 3);
+        padStringToGlobalBuffer(line4, 20);
+        lcd.print(globalStringBuffer);
+    }
+}
+
 void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused, int maxConcurrent) {
     if (!lcdAvailable) return; // Skip if LCD not available
     

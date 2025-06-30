@@ -25,6 +25,8 @@ public:
     // Display methods - using const char* for heap safety
     void showMessage(const char* line1, const char* line2 = "", 
                     const char* line3 = "", const char* line4 = "");
+    void showMenuMessage(const char* line1, const char* line2 = "", 
+                        const char* line3 = "", const char* line4 = "");
     
     // Display specific screens
     void showStatus(const RingerManager* ringerManager, bool paused, int maxConcurrent = -1);
