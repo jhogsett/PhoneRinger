@@ -63,6 +63,7 @@ Settings SettingsManager::getDefaultSettings() {
     defaults.maxConcurrent = 4;      // MAX_CONCURRENT_ACTIVE_PHONES default
     defaults.activeRelays = 8;       // NUM_PHONES default  
     defaults.maxCallDelay = 30;      // 30 seconds default
+    defaults.ringerHangTime = 2000;  // 2 seconds default hang time
     defaults.checksum = 0;           // Will be calculated when saving
     
     return defaults;
@@ -84,6 +85,11 @@ bool SettingsManager::validateSettings(const Settings& settings) {
         return false;
     }
     
+    // Validate ringer hang time (500-10000 milliseconds)
+    if (settings.ringerHangTime < 500 || settings.ringerHangTime > 10000) {
+        return false;
+    }
+    
     return true;
 }
 
@@ -95,6 +101,8 @@ uint8_t SettingsManager::calculateChecksum(const Settings& settings) {
     checksum ^= settings.activeRelays;
     checksum ^= (uint8_t)(settings.maxCallDelay & 0xFF);
     checksum ^= (uint8_t)(settings.maxCallDelay >> 8);
+    checksum ^= (uint8_t)(settings.ringerHangTime & 0xFF);
+    checksum ^= (uint8_t)(settings.ringerHangTime >> 8);
     
     return checksum;
 }
