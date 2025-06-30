@@ -352,33 +352,59 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
 }
 
 void DisplayManager::showStartupMessage() {
-    showMessage("CallStorm Simulator",
-                "Version 2.0",
-                "8-Phone System",
-                "Initializing...");
+    showMessage("CallStorm 2K V.1.0",
+                "Call Center Chaos!",
+                "",
+                "WAIT System Testing");
 }
 
 void DisplayManager::showPauseMessage() {
-    showMessage("CallStorm System",
+    showMessage("CallStorm 2K V.1.0",
                 "** SYSTEM PAUSED **",
-                "All relays OFF",
-                "Press PinA0 to resume");
+                "Ringers Denergized",
+                "PRESS PAUSE TO CONT.");
 }
 
 void DisplayManager::showResumeMessage() {
-    showMessage("CallStorm System",
+    showMessage("CallStorm 2K V.1.0",
                 "** SYSTEM RESUMED **",
-                "Calls restarting...",
+                "Calls Restarting...",
                 "");
     delay(1000); // Show resume message briefly
     displayNeedsUpdate = true;
 }
 
 void DisplayManager::showChaosMessage() {
-    showMessage("CallStorm 2000",
-                "** MAXIMUM CHAOS **",
-                "ALL SYSTEMS ACTIVE!",
-                "BRACE FOR IMPACT!");
+    if (!lcdAvailable) return; // Skip if LCD not available
+    
+    lcd.clear();
+    
+    // Center-justified chaos message
+    const char* lines[4] = {
+        "Prepare For",
+        "** MAXIMUM CHAOS **",
+        "Max Settings Engaged",
+        "BRACE FOR IMPACT!"
+    };
+    
+    for (int lineNum = 0; lineNum < 4; lineNum++) {
+        lcd.setCursor(0, lineNum);
+        const char* text = lines[lineNum];
+        int len = strlen(text);
+        int spaces = (20 - len) / 2;
+        
+        // Center the text
+        for (int i = 0; i < 20; i++) {
+            if (i < spaces || i >= spaces + len) {
+                globalStringBuffer[i] = ' ';
+            } else {
+                globalStringBuffer[i] = text[i - spaces];
+            }
+        }
+        globalStringBuffer[20] = '\0';
+        lcd.print(globalStringBuffer);
+    }
+    
     delay(3000); // Show chaos message for 3 seconds
     displayNeedsUpdate = true;
 }
