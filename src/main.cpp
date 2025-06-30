@@ -266,8 +266,8 @@ void checkPauseButton() {
         if (!DEBUG_ENCODER_MODE) {
           Serial.println(F("*** SYSTEM PAUSED - Stopping all activity ***"));
         }
-        // Stop all calls and turn off all relays immediately
-        ringerManager.stopAllCalls();
+        // Turn off all relays immediately but don't stop the call state machines
+        // This preserves timing so calls remain unsynchronized when resumed
         for (int i = 0; i < NUM_PHONES; i++) {
           digitalWrite(RELAY_PINS[i], HIGH); // HIGH = inactive for active-LOW relay modules
         }
