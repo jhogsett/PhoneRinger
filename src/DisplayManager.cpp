@@ -216,11 +216,20 @@ void DisplayManager::showStatus(const RingerManager* ringerManager, bool paused,
     
     // Line 1: CallStorm branding with storm icon and right-aligned timer (20 chars: "CallStorm🌪️    12:34")
     lcd.setCursor(0, 0);
-    unsigned long seconds = millis() / 1000;
-    unsigned long minutes = seconds / 60;
-    seconds = seconds % 60;
-    // Format: "CallStorm" + storm icon (char 1) + spaces + timer
-    snprintf(globalStringBuffer, sizeof(globalStringBuffer), "CallStorm \x01 2K %02lu:%02lu", minutes % 100, seconds);
+    unsigned long totalSeconds = millis() / 1000;
+    unsigned long minutes = totalSeconds / 60;
+    unsigned long seconds = totalSeconds % 60;
+    
+    // Switch to HH:MM format when time exceeds 99:59 (6000 minutes)
+    if (minutes >= 100) {
+        unsigned long hours = minutes / 60;
+        minutes = minutes % 60;
+        // Format: "CallStorm" + storm icon (char 1) + spaces + timer (HH:MM)
+        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "CallStorm \x01 2K %02lu:%02lu", hours % 100, minutes);
+    } else {
+        // Format: "CallStorm" + storm icon (char 1) + spaces + timer (MM:SS)
+        snprintf(globalStringBuffer, sizeof(globalStringBuffer), "CallStorm \x01 2K %02lu:%02lu", minutes, seconds);
+    }
     // Ensure exactly 20 characters by padding with spaces
     int len1 = strlen(globalStringBuffer);
     for (int i = len1; i < 20; i++) {

@@ -1,8 +1,10 @@
+## ISSUES
+
+- on unpausing, the active rings become synchronized, happening together without their previous random slight timing differences
+
 ## MORE IDEAS
 
 - If the running time exceeds the value "99:99" switch from showing minutes & seconds to showing hours & minutes
-
-- No longer seeing Max:X in the display
 
 - Clean up the Line #3 display
     - use the format "A:X R:X E:X M:X"
@@ -28,6 +30,28 @@
     - add a numeric label to the settings to make them easier to remember and recognize, like "1)Active Phones" "2)Call Timing" "3)Max Concurrent"
     - Make the Exit Menu item especially easily noticeable, perhaps with ASCII chars and an arrow
     
+- Display Manager Full-Screen Message Tweaks
+    - showStartupMessage (all left-justified)
+        - CallStorm 2K V. x.xx 
+        - Call Center Chaos!
+        - (left blank)
+        - WAIT System Testing
+    - showPauseMessage (all left-justified)
+        - CallStorm 2K V. x.xx
+        - ** SYSTEM PAUSED **
+        - Ringers Denergized"
+        - PRESS PAUSE TO CONT.
+    - showResumeMessage (all left-justified)
+        - CallStorm 2K V. x.xx
+        - ** SYSTEM RESUMED **
+        - Calls Restarting...
+        - (left blank)
+    - showChaosMessage (all center-justified)
+        - Prepare For 
+        - ** MAXIMUM CHAOS **
+        - Max Settings Engaged 
+        - BRACE FOR IMPACT!
 
-
-
+- Move string literals to PROGMEM where practical
+    - need to carefully test this kind of change
+    
