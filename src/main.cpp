@@ -122,7 +122,7 @@ void setup() {
   pinMode(RINGER_POWER_PIN, OUTPUT);  // Initialize ringer power control pin
   pinMode(READY_LED, OUTPUT);         // Initialize ready LED pin
   digitalWrite(STATUS_LED, LOW);  // Start with status LED off
-  digitalWrite(RINGER_POWER_PIN, LOW);  // Ensure ringer power is off initially
+  digitalWrite(RINGER_POWER_PIN, HIGH);  // Ensure ringer power is off initially (active LOW)
   digitalWrite(READY_LED, LOW);       // Start with ready LED off during initialization
   
   // Initialize the ringer manager with phone instances (using nullptr for config for now)
@@ -268,7 +268,7 @@ void updateRingerPowerControl() {
     // System paused - immediately turn off ringer power
     if (ringerPowerActive) {
       ringerPowerActive = false;
-      digitalWrite(RINGER_POWER_PIN, LOW);
+      digitalWrite(RINGER_POWER_PIN, HIGH);  // HIGH = off for active LOW
     }
     return;
   }
@@ -280,7 +280,7 @@ void updateRingerPowerControl() {
     // Phones are active - turn on ringer power if not already on
     if (!ringerPowerActive) {
       ringerPowerActive = true;
-      digitalWrite(RINGER_POWER_PIN, HIGH);
+      digitalWrite(RINGER_POWER_PIN, LOW);  // LOW = on for active LOW
     }
     // Reset the hang timer while phones are active
     ringerPowerStartTime = currentTime;
@@ -290,7 +290,7 @@ void updateRingerPowerControl() {
       if (currentTime - ringerPowerStartTime >= (ringerHangTimeSetting * 1000UL)) {
         // Hang time expired, turn off ringer power
         ringerPowerActive = false;
-        digitalWrite(RINGER_POWER_PIN, LOW);
+        digitalWrite(RINGER_POWER_PIN, HIGH);  // HIGH = off for active LOW
       }
     }
   }
